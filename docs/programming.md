@@ -32,8 +32,9 @@ programs if you keep the copyright notice (`LICENSE`).
 - `play` returns when the song ends or when the user presses SPACE.
 - Engine, ROM set and SoundFont changes are not saved on the Pi: set them at
   the start of your program if you need them.
-- Each command prints a line or two. To run several in a row without the
-  `Scroll?` prompt, `POKE 23692,255` before each one.
+- Each `play` prints three lines. A jukebox that plays many songs in a row
+  without clearing the screen will stop at `Scroll?`; `CLS` between songs
+  avoids it.
 
 ## 2. GSEQ: music in a game
 
