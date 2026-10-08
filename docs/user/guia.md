@@ -182,9 +182,10 @@ python tools/host/gseq.py tema.mid -o TEMA.GSQ --loop-start-ms 4000 --report inf
   bytes por segundo) o si al volver al principio del bucle quedan notas
   sonando.
 
-Para programadores: la biblioteca de reproducción (`src/lib/gseq.s`, con un
-enlace para ZX Basic en `src/lib/gseq.bas`) está descrita en
-[`docs/m6-gseq.md`](../m6-gseq.md).
+Para programadores: cómo usar el driver y la biblioteca GSEQ desde BASIC,
+ZX Basic o ensamblador está en la guía de programación
+([`programming.md`](../programming.md), en inglés). El formato y el diseño de
+la biblioteca, en [`m6-gseq.md`](../m6-gseq.md).
 
 ## 7. Problemas frecuentes
 

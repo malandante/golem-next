@@ -30,6 +30,7 @@ DOTS = ("GOLEM", "MT32", "GM", "GSQ")
 SLOTS = ("4000", "6000", "8000", "A000", "C000", "E000")
 DOCS = {
     "docs/guide.md": "docs/user/guide.md",
+    "docs/programming.md": "docs/programming.md",
     "docs/guia.md": "docs/user/guia.md",
     "docs/gseq.md": "docs/m6-gseq.md",
     "docs/driver-api.md": "docs/driver-api.md",

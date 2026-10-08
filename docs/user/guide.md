@@ -179,9 +179,10 @@ python tools/host/gseq.py theme.mid -o THEME.GSQ --loop-start-ms 4000 --report r
 - The converter warns when a passage needs more than the cable can carry
   (3125 bytes per second) or when notes are left sounding at the loop point.
 
-For programmers: the playback library (`src/lib/gseq.s`, with a ZX Basic
-binding in `src/lib/gseq.bas`) is described in
-[`docs/m6-gseq.md`](../m6-gseq.md) (in Spanish).
+For programmers: how to use the driver and the GSEQ library from BASIC,
+ZX Basic or assembler is in the
+[programmer's guide](../programming.md). The format and library design are in
+[`m6-gseq.md`](../m6-gseq.md) (in Spanish).
 
 ## 7. Troubleshooting
 

@@ -19,6 +19,7 @@ Golem firmware and its source are at
 [malandante/mt32-pi](https://github.com/malandante/mt32-pi/releases).
 
 **User guide:** [English](docs/user/guide.md) · [español](docs/user/guia.md).
+**Programmer's guide:** [music and MIDI in your own programs](docs/programming.md) (BASIC, ZX Basic, assembler).
 **Release notes:** [RELEASE_NOTES.md](RELEASE_NOTES.md) · **Roadmap:** [what has been done and what comes next](ROADMAP.md).
 
 golem-next is MIT licensed ([LICENSE](LICENSE)). The Golem firmware is a
@@ -31,6 +32,7 @@ separate program under GPL-3.0. No Roland ROMs or commercial music are included.
 ## Documentación
 
 - [Arquitectura y análisis de NextZXOS](docs/architecture.md)
+- [Guía de programación (inglés)](docs/programming.md)
 - [ABI del driver](docs/driver-api.md)
 - [Formato GSEQ y biblioteca](docs/m6-gseq.md)
 - [Arquitectura mínima de Golem](docs/golem-architecture.md)
