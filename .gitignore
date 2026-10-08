@@ -1,0 +1,11 @@
+*.nex
+*.img
+*.pdb
+*.pyc
+*.user
+__pycache__/
+bin/
+build/
+obj/
+captured-midi.bin
+dist/

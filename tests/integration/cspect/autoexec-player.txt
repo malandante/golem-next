@@ -1,0 +1,4 @@
+#autostart 10
+10 .install "c:/nextzxos/GOLEM.DRV"
+20 .golem play "c:/TEST1.MID"
+30 STOP

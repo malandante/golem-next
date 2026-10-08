@@ -1,0 +1,12 @@
+#autostart 10
+10 OUT 9275,7: OUT 9531,3
+20 DIM a$(9000)
+30 .install "c:/nextzxos/GOLEM.DRV"
+40 .golem status
+50 .golem note 60 100 1
+60 .golem play "c:/TEST1.MID"
+70 .uninstall "c:/nextzxos/GOLEM.DRV"
+80 LET k=0: FOR i=1 TO 9000: IF a$(i)<>" " THEN LET k=k+1
+90 NEXT i
+100 OUT 5435,64: IF k=0 THEN OUT 4923,249: STOP
+110 OUT 4923,248: PRINT k: STOP

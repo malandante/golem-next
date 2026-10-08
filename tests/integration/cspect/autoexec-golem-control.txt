@@ -1,0 +1,10 @@
+#autostart 10
+10 .install "c:/nextzxos/GOLEM.DRV"
+20 .golem soundfont 5
+30 .golem engine fluidsynth
+40 .golem rom cm32l
+50 .golem engine mt32
+60 .uninstall "c:/nextzxos/GOLEM.DRV"
+70 OUT 5435,64
+80 OUT 4923,249
+90 STOP

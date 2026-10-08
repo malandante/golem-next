@@ -1,0 +1,7 @@
+#autostart 10
+10 .install "c:/nextzxos/GOLEM.DRV"
+20 .mtstress
+30 .uninstall "c:/nextzxos/GOLEM.DRV"
+40 OUT 5435,64
+50 OUT 4923,249
+60 STOP

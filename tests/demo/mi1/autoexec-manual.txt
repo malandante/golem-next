@@ -1,0 +1,11 @@
+#autostart 10
+10 OUT 9275,7
+20 OUT 9531,0
+30 CLS
+40 PRINT "golem-next / MONKEY ISLAND"
+50 PRINT
+60 PRINT "Escribe estos comandos:"
+70 PRINT
+80 PRINT ".install c:/nextzxos/GOLEM.DRV"
+90 PRINT ".mt32 play c:/MI_1.MID"
+100 STOP

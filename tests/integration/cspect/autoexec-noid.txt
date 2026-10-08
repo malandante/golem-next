@@ -1,0 +1,5 @@
+#autostart 10
+10 .mtnoid
+20 OUT 5435,64
+30 OUT 4923,249
+40 STOP

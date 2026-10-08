@@ -1,0 +1,39 @@
+name: host-tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  unittest:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Host tests
+        run: python -m unittest discover -s tests/host -v
+      - name: Host tools run with isolated sys.path (NextBuild embedded Python)
+        run: |
+          python -I tools/host/golem_responder.py --help > /dev/null
+          python -I tools/host/capture_uart.py --help > /dev/null
+
+  driver-relocations:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build sjasmplus
+        run: |
+          git clone --depth 1 --branch v1.24.0 https://github.com/z00m128/sjasmplus.git /tmp/sjasmplus
+          make -C /tmp/sjasmplus -j4 USE_LUA=0
+      - name: No symbols that differ only in case (SNasm ignores case)
+        run: python3 tools/ci/check_symbol_case.py
+      - name: Relocation table matches the code (#18)
+        run: python3 tools/ci/check_driver_relocations.py --sjasmplus /tmp/sjasmplus/sjasmplus
+      - name: GSEQ library banks assemble and fit in 8 KB
+        run: python3 tools/ci/check_gseq_banks.py --sjasmplus /tmp/sjasmplus/sjasmplus

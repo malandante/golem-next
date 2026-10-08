@@ -1,0 +1,303 @@
+{
+  "capture": "joy-testtim-60hz.csv",
+  "passed": true,
+  "bytes": 2492,
+  "source_rows": 2492,
+  "timing": [
+    {
+      "run": 1,
+      "event": "C on",
+      "expected_s": 0.0,
+      "observed_s": 0.0,
+      "error_s": 0.0
+    },
+    {
+      "run": 1,
+      "event": "C off",
+      "expected_s": 0.5,
+      "observed_s": 0.488866,
+      "error_s": -0.011133999999999977
+    },
+    {
+      "run": 1,
+      "event": "D on",
+      "expected_s": 0.5,
+      "observed_s": 0.489826,
+      "error_s": -0.010174000000000016
+    },
+    {
+      "run": 1,
+      "event": "D off",
+      "expected_s": 0.9,
+      "observed_s": 0.888914,
+      "error_s": -0.01108600000000004
+    },
+    {
+      "run": 1,
+      "event": "E on",
+      "expected_s": 0.9,
+      "observed_s": 0.8898739999999999,
+      "error_s": -0.01012600000000008
+    },
+    {
+      "run": 1,
+      "event": "E off",
+      "expected_s": 1.9,
+      "observed_s": 1.888866,
+      "error_s": -0.011133999999999977
+    },
+    {
+      "run": 2,
+      "event": "C on",
+      "expected_s": 0.0,
+      "observed_s": 0.0,
+      "error_s": 0.0
+    },
+    {
+      "run": 2,
+      "event": "C off",
+      "expected_s": 0.5,
+      "observed_s": 0.4888720000000002,
+      "error_s": -0.011127999999999805
+    },
+    {
+      "run": 2,
+      "event": "D on",
+      "expected_s": 0.5,
+      "observed_s": 0.48983200000000027,
+      "error_s": -0.010167999999999733
+    },
+    {
+      "run": 2,
+      "event": "D off",
+      "expected_s": 0.9,
+      "observed_s": 0.888919,
+      "error_s": -0.011081000000000008
+    },
+    {
+      "run": 2,
+      "event": "E on",
+      "expected_s": 0.9,
+      "observed_s": 0.8898790000000001,
+      "error_s": -0.010120999999999936
+    },
+    {
+      "run": 2,
+      "event": "E off",
+      "expected_s": 1.9,
+      "observed_s": 1.8888759999999998,
+      "error_s": -0.011124000000000134
+    },
+    {
+      "run": 3,
+      "event": "C on",
+      "expected_s": 0.0,
+      "observed_s": 0.0,
+      "error_s": 0.0
+    },
+    {
+      "run": 3,
+      "event": "C off",
+      "expected_s": 0.5,
+      "observed_s": 0.4888709999999996,
+      "error_s": -0.011129000000000389
+    },
+    {
+      "run": 3,
+      "event": "D on",
+      "expected_s": 0.5,
+      "observed_s": 0.4898309999999997,
+      "error_s": -0.010169000000000317
+    },
+    {
+      "run": 3,
+      "event": "D off",
+      "expected_s": 0.9,
+      "observed_s": 0.8889189999999996,
+      "error_s": -0.011081000000000452
+    },
+    {
+      "run": 3,
+      "event": "E on",
+      "expected_s": 0.9,
+      "observed_s": 0.8898789999999996,
+      "error_s": -0.01012100000000038
+    },
+    {
+      "run": 3,
+      "event": "E off",
+      "expected_s": 1.9,
+      "observed_s": 1.8888739999999995,
+      "error_s": -0.011126000000000413
+    },
+    {
+      "run": 4,
+      "event": "C on",
+      "expected_s": 0.0,
+      "observed_s": 0.0,
+      "error_s": 0.0
+    },
+    {
+      "run": 4,
+      "event": "C off",
+      "expected_s": 0.5,
+      "observed_s": 0.4888690000000011,
+      "error_s": -0.011130999999998892
+    },
+    {
+      "run": 4,
+      "event": "D on",
+      "expected_s": 0.5,
+      "observed_s": 0.4898300000000013,
+      "error_s": -0.01016999999999868
+    },
+    {
+      "run": 4,
+      "event": "D off",
+      "expected_s": 0.9,
+      "observed_s": 0.8889170000000011,
+      "error_s": -0.011082999999998955
+    },
+    {
+      "run": 4,
+      "event": "E on",
+      "expected_s": 0.9,
+      "observed_s": 0.8898780000000013,
+      "error_s": -0.010121999999998743
+    },
+    {
+      "run": 4,
+      "event": "E off",
+      "expected_s": 1.9,
+      "observed_s": 1.8888740000000013,
+      "error_s": -0.011125999999998637
+    },
+    {
+      "run": 5,
+      "event": "C on",
+      "expected_s": 0.0,
+      "observed_s": 0.0,
+      "error_s": 0.0
+    },
+    {
+      "run": 5,
+      "event": "C off",
+      "expected_s": 0.5,
+      "observed_s": 0.48886000000000074,
+      "error_s": -0.011139999999999262
+    },
+    {
+      "run": 5,
+      "event": "D on",
+      "expected_s": 0.5,
+      "observed_s": 0.4898199999999999,
+      "error_s": -0.010180000000000078
+    },
+    {
+      "run": 5,
+      "event": "D off",
+      "expected_s": 0.9,
+      "observed_s": 0.8889070000000014,
+      "error_s": -0.011092999999998576
+    },
+    {
+      "run": 5,
+      "event": "E on",
+      "expected_s": 0.9,
+      "observed_s": 0.8898670000000006,
+      "error_s": -0.010132999999999392
+    },
+    {
+      "run": 5,
+      "event": "E off",
+      "expected_s": 1.9,
+      "observed_s": 1.8888630000000006,
+      "error_s": -0.011136999999999286
+    },
+    {
+      "run": 6,
+      "event": "C on",
+      "expected_s": 0.0,
+      "observed_s": 0.0,
+      "error_s": 0.0
+    },
+    {
+      "run": 6,
+      "event": "C off",
+      "expected_s": 0.5,
+      "observed_s": 0.48886899999999933,
+      "error_s": -0.011131000000000668
+    },
+    {
+      "run": 6,
+      "event": "D on",
+      "expected_s": 0.5,
+      "observed_s": 0.4898290000000003,
+      "error_s": -0.010170999999999708
+    },
+    {
+      "run": 6,
+      "event": "D off",
+      "expected_s": 0.9,
+      "observed_s": 0.8889169999999993,
+      "error_s": -0.011083000000000731
+    },
+    {
+      "run": 6,
+      "event": "E on",
+      "expected_s": 0.9,
+      "observed_s": 0.8898770000000003,
+      "error_s": -0.010122999999999771
+    },
+    {
+      "run": 6,
+      "event": "E off",
+      "expected_s": 1.9,
+      "observed_s": 1.8888730000000002,
+      "error_s": -0.011126999999999665
+    },
+    {
+      "run": 7,
+      "event": "C on",
+      "expected_s": 0.0,
+      "observed_s": 0.0,
+      "error_s": 0.0
+    },
+    {
+      "run": 7,
+      "event": "C off",
+      "expected_s": 0.5,
+      "observed_s": 0.4888639999999995,
+      "error_s": -0.011136000000000479
+    },
+    {
+      "run": 7,
+      "event": "D on",
+      "expected_s": 0.5,
+      "observed_s": 0.48982400000000226,
+      "error_s": -0.010175999999997742
+    },
+    {
+      "run": 7,
+      "event": "D off",
+      "expected_s": 0.9,
+      "observed_s": 0.8889110000000002,
+      "error_s": -0.011088999999999793
+    },
+    {
+      "run": 7,
+      "event": "E on",
+      "expected_s": 0.9,
+      "observed_s": 0.8898709999999994,
+      "error_s": -0.01012900000000061
+    },
+    {
+      "run": 7,
+      "event": "E off",
+      "expected_s": 1.9,
+      "observed_s": 1.8888689999999997,
+      "error_s": -0.011131000000000224
+    }
+  ],
+  "detail": "7 run(s), all timing errors within +/-50.000 ms"
+}

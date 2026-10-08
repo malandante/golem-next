@@ -1,0 +1,20 @@
+#autostart 10
+10 .install "c:/nextzxos/GOLEM.DRV"
+20 OUT 9275,7
+30 OUT 9531,0
+40 .mtduration
+50 OUT 9275,7
+60 OUT 9531,1
+70 .mtduration
+80 OUT 9275,7
+90 OUT 9531,2
+100 .mtduration
+110 OUT 9275,7
+120 OUT 9531,3
+130 .mtduration
+140 OUT 9275,7
+150 OUT 9531,0
+160 .uninstall "c:/nextzxos/GOLEM.DRV"
+170 OUT 5435,64
+180 OUT 4923,249
+190 STOP

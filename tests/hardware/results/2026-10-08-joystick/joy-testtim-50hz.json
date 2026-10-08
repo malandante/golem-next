@@ -1,0 +1,429 @@
+{
+  "capture": "joy-testtim-50hz.csv",
+  "passed": true,
+  "bytes": 3560,
+  "source_rows": 3560,
+  "timing": [
+    {
+      "run": 1,
+      "event": "C on",
+      "expected_s": 0.0,
+      "observed_s": 0.0,
+      "error_s": 0.0
+    },
+    {
+      "run": 1,
+      "event": "C off",
+      "expected_s": 0.5,
+      "observed_s": 0.49794000000000005,
+      "error_s": -0.0020599999999999508
+    },
+    {
+      "run": 1,
+      "event": "D on",
+      "expected_s": 0.5,
+      "observed_s": 0.4989,
+      "error_s": -0.0010999999999999899
+    },
+    {
+      "run": 1,
+      "event": "D off",
+      "expected_s": 0.9,
+      "observed_s": 0.897977,
+      "error_s": -0.002022999999999997
+    },
+    {
+      "run": 1,
+      "event": "E on",
+      "expected_s": 0.9,
+      "observed_s": 0.898937,
+      "error_s": -0.0010630000000000361
+    },
+    {
+      "run": 1,
+      "event": "E off",
+      "expected_s": 1.9,
+      "observed_s": 1.897986,
+      "error_s": -0.0020139999999999603
+    },
+    {
+      "run": 2,
+      "event": "C on",
+      "expected_s": 0.0,
+      "observed_s": 0.0,
+      "error_s": 0.0
+    },
+    {
+      "run": 2,
+      "event": "C off",
+      "expected_s": 0.5,
+      "observed_s": 0.49792499999999995,
+      "error_s": -0.002075000000000049
+    },
+    {
+      "run": 2,
+      "event": "D on",
+      "expected_s": 0.5,
+      "observed_s": 0.498885,
+      "error_s": -0.0011149999999999771
+    },
+    {
+      "run": 2,
+      "event": "D off",
+      "expected_s": 0.9,
+      "observed_s": 0.8979750000000002,
+      "error_s": -0.0020249999999998325
+    },
+    {
+      "run": 2,
+      "event": "E on",
+      "expected_s": 0.9,
+      "observed_s": 0.8989349999999998,
+      "error_s": -0.0010650000000002047
+    },
+    {
+      "run": 2,
+      "event": "E off",
+      "expected_s": 1.9,
+      "observed_s": 1.897929,
+      "error_s": -0.002070999999999934
+    },
+    {
+      "run": 3,
+      "event": "C on",
+      "expected_s": 0.0,
+      "observed_s": 0.0,
+      "error_s": 0.0
+    },
+    {
+      "run": 3,
+      "event": "C off",
+      "expected_s": 0.5,
+      "observed_s": 0.49792600000000053,
+      "error_s": -0.002073999999999465
+    },
+    {
+      "run": 3,
+      "event": "D on",
+      "expected_s": 0.5,
+      "observed_s": 0.4988860000000006,
+      "error_s": -0.0011139999999993933
+    },
+    {
+      "run": 3,
+      "event": "D off",
+      "expected_s": 0.9,
+      "observed_s": 0.8979870000000005,
+      "error_s": -0.0020129999999994874
+    },
+    {
+      "run": 3,
+      "event": "E on",
+      "expected_s": 0.9,
+      "observed_s": 0.8989470000000006,
+      "error_s": -0.0010529999999994155
+    },
+    {
+      "run": 3,
+      "event": "E off",
+      "expected_s": 1.9,
+      "observed_s": 1.8979300000000006,
+      "error_s": -0.00206999999999935
+    },
+    {
+      "run": 4,
+      "event": "C on",
+      "expected_s": 0.0,
+      "observed_s": 0.0,
+      "error_s": 0.0
+    },
+    {
+      "run": 4,
+      "event": "C off",
+      "expected_s": 0.5,
+      "observed_s": 0.4979250000000004,
+      "error_s": -0.002074999999999605
+    },
+    {
+      "run": 4,
+      "event": "D on",
+      "expected_s": 0.5,
+      "observed_s": 0.49888500000000136,
+      "error_s": -0.0011149999999986449
+    },
+    {
+      "run": 4,
+      "event": "D off",
+      "expected_s": 0.9,
+      "observed_s": 0.8979860000000013,
+      "error_s": -0.002013999999998739
+    },
+    {
+      "run": 4,
+      "event": "E on",
+      "expected_s": 0.9,
+      "observed_s": 0.8989460000000005,
+      "error_s": -0.0010539999999995553
+    },
+    {
+      "run": 4,
+      "event": "E off",
+      "expected_s": 1.9,
+      "observed_s": 1.897983,
+      "error_s": -0.0020169999999999355
+    },
+    {
+      "run": 5,
+      "event": "C on",
+      "expected_s": 0.0,
+      "observed_s": 0.0,
+      "error_s": 0.0
+    },
+    {
+      "run": 5,
+      "event": "C off",
+      "expected_s": 0.5,
+      "observed_s": 0.49792399999999937,
+      "error_s": -0.002076000000000633
+    },
+    {
+      "run": 5,
+      "event": "D on",
+      "expected_s": 0.5,
+      "observed_s": 0.4988840000000003,
+      "error_s": -0.0011159999999996728
+    },
+    {
+      "run": 5,
+      "event": "D off",
+      "expected_s": 0.9,
+      "observed_s": 0.8979859999999995,
+      "error_s": -0.0020140000000005154
+    },
+    {
+      "run": 5,
+      "event": "E on",
+      "expected_s": 0.9,
+      "observed_s": 0.8989459999999987,
+      "error_s": -0.0010540000000013316
+    },
+    {
+      "run": 5,
+      "event": "E off",
+      "expected_s": 1.9,
+      "observed_s": 1.8979280000000003,
+      "error_s": -0.0020719999999996297
+    },
+    {
+      "run": 6,
+      "event": "C on",
+      "expected_s": 0.0,
+      "observed_s": 0.0,
+      "error_s": 0.0
+    },
+    {
+      "run": 6,
+      "event": "C off",
+      "expected_s": 0.5,
+      "observed_s": 0.4978549999999995,
+      "error_s": -0.0021450000000005076
+    },
+    {
+      "run": 6,
+      "event": "D on",
+      "expected_s": 0.5,
+      "observed_s": 0.49881500000000045,
+      "error_s": -0.0011849999999995475
+    },
+    {
+      "run": 6,
+      "event": "D off",
+      "expected_s": 0.9,
+      "observed_s": 0.8979119999999998,
+      "error_s": -0.002088000000000201
+    },
+    {
+      "run": 6,
+      "event": "E on",
+      "expected_s": 0.9,
+      "observed_s": 0.898871999999999,
+      "error_s": -0.001128000000001017
+    },
+    {
+      "run": 6,
+      "event": "E off",
+      "expected_s": 1.9,
+      "observed_s": 1.897870000000001,
+      "error_s": -0.002129999999998855
+    },
+    {
+      "run": 7,
+      "event": "C on",
+      "expected_s": 0.0,
+      "observed_s": 0.0,
+      "error_s": 0.0
+    },
+    {
+      "run": 7,
+      "event": "C off",
+      "expected_s": 0.5,
+      "observed_s": 0.49792599999999965,
+      "error_s": -0.0020740000000003533
+    },
+    {
+      "run": 7,
+      "event": "D on",
+      "expected_s": 0.5,
+      "observed_s": 0.49888599999999883,
+      "error_s": -0.0011140000000011696
+    },
+    {
+      "run": 7,
+      "event": "D off",
+      "expected_s": 0.9,
+      "observed_s": 0.8979770000000009,
+      "error_s": -0.002022999999999109
+    },
+    {
+      "run": 7,
+      "event": "E on",
+      "expected_s": 0.9,
+      "observed_s": 0.8989370000000001,
+      "error_s": -0.0010629999999999251
+    },
+    {
+      "run": 7,
+      "event": "E off",
+      "expected_s": 1.9,
+      "observed_s": 1.8979299999999988,
+      "error_s": -0.0020700000000011265
+    },
+    {
+      "run": 8,
+      "event": "C on",
+      "expected_s": 0.0,
+      "observed_s": 0.0,
+      "error_s": 0.0
+    },
+    {
+      "run": 8,
+      "event": "C off",
+      "expected_s": 0.5,
+      "observed_s": 0.4979269999999971,
+      "error_s": -0.002073000000002878
+    },
+    {
+      "run": 8,
+      "event": "D on",
+      "expected_s": 0.5,
+      "observed_s": 0.49888699999999986,
+      "error_s": -0.0011130000000001417
+    },
+    {
+      "run": 8,
+      "event": "D off",
+      "expected_s": 0.9,
+      "observed_s": 0.8979769999999974,
+      "error_s": -0.0020230000000026616
+    },
+    {
+      "run": 8,
+      "event": "E on",
+      "expected_s": 0.9,
+      "observed_s": 0.8989379999999976,
+      "error_s": -0.0010620000000024499
+    },
+    {
+      "run": 8,
+      "event": "E off",
+      "expected_s": 1.9,
+      "observed_s": 1.8979859999999995,
+      "error_s": -0.0020140000000004044
+    },
+    {
+      "run": 9,
+      "event": "C on",
+      "expected_s": 0.0,
+      "observed_s": 0.0,
+      "error_s": 0.0
+    },
+    {
+      "run": 9,
+      "event": "C off",
+      "expected_s": 0.5,
+      "observed_s": 0.4979239999999976,
+      "error_s": -0.0020760000000024093
+    },
+    {
+      "run": 9,
+      "event": "D on",
+      "expected_s": 0.5,
+      "observed_s": 0.4988840000000003,
+      "error_s": -0.0011159999999996728
+    },
+    {
+      "run": 9,
+      "event": "D off",
+      "expected_s": 0.9,
+      "observed_s": 0.8979859999999995,
+      "error_s": -0.0020140000000005154
+    },
+    {
+      "run": 9,
+      "event": "E on",
+      "expected_s": 0.9,
+      "observed_s": 0.8989459999999987,
+      "error_s": -0.0010540000000013316
+    },
+    {
+      "run": 9,
+      "event": "E off",
+      "expected_s": 1.9,
+      "observed_s": 1.8979280000000003,
+      "error_s": -0.0020719999999996297
+    },
+    {
+      "run": 10,
+      "event": "C on",
+      "expected_s": 0.0,
+      "observed_s": 0.0,
+      "error_s": 0.0
+    },
+    {
+      "run": 10,
+      "event": "C off",
+      "expected_s": 0.5,
+      "observed_s": 0.4978529999999992,
+      "error_s": -0.002147000000000787
+    },
+    {
+      "run": 10,
+      "event": "D on",
+      "expected_s": 0.5,
+      "observed_s": 0.4988129999999984,
+      "error_s": -0.0011870000000016034
+    },
+    {
+      "run": 10,
+      "event": "D off",
+      "expected_s": 0.9,
+      "observed_s": 0.8979140000000001,
+      "error_s": -0.0020859999999999213
+    },
+    {
+      "run": 10,
+      "event": "E on",
+      "expected_s": 0.9,
+      "observed_s": 0.8988739999999993,
+      "error_s": -0.0011260000000007375
+    },
+    {
+      "run": 10,
+      "event": "E off",
+      "expected_s": 1.9,
+      "observed_s": 1.8978549999999998,
+      "error_s": -0.0021450000000000635
+    }
+  ],
+  "detail": "10 run(s), all timing errors within +/-50.000 ms"
+}

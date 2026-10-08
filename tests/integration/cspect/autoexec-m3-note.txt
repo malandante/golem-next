@@ -1,0 +1,10 @@
+#autostart 10
+10 .install "c:/nextzxos/GOLEM.DRV"
+20 .golem status
+30 .golem note 0 1 1 1
+40 .golem note 127 127 1 16
+50 .golem note 60 100 1
+60 .uninstall "c:/nextzxos/GOLEM.DRV"
+70 OUT 5435,64
+80 OUT 4923,249
+90 STOP
