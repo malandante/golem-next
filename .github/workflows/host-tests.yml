@@ -35,5 +35,9 @@ jobs:
         run: python3 tools/ci/check_symbol_case.py
       - name: Relocation table matches the code (#18)
         run: python3 tools/ci/check_driver_relocations.py --sjasmplus /tmp/sjasmplus/sjasmplus
+      - name: SET_OUTPUT in a Z80 simulator (#64)
+        run: |
+          git clone --depth 1 https://github.com/skoolkid/skoolkit.git /tmp/skoolkit
+          python3 tools/ci/test_driver_output.py --sjasmplus /tmp/sjasmplus/sjasmplus --skoolkit /tmp/skoolkit
       - name: GSEQ library banks assemble and fit in 8 KB
         run: python3 tools/ci/check_gseq_banks.py --sjasmplus /tmp/sjasmplus/sjasmplus

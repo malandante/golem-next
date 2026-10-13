@@ -59,9 +59,9 @@ Patillas del lado de la Pi (numeración de 40 patillas de la Pi):
 | Masa | — | 6 (u otra GND) |
 | 5 V y 3,3 V | — | 2, 4, 1, 17: **aisladas, sin conectar** |
 
-*Para una versión 1.x:* la salida MIDI por el puerto de joystick, para usar un
-sintetizador MIDI externo sin Pi. El Next ya saca MIDI por ahí, a
-3,3 V, pero falta el cable y su esquema: no conectes un cable MIDI DIN al
+*Puerto de joystick:* `.golem output left` o `right` saca el MIDI por la
+patilla 7 de ese puerto, para un sintetizador MIDI externo sin Pi. La señal es
+de 3,3 V y falta el cable con su esquema: no conectes un cable MIDI DIN al
 joystick por tu cuenta.
 
 ## 3. Preparar la Pi
@@ -89,6 +89,13 @@ joystick por tu cuenta.
    mt32-pi pasa a FluidSynth sin avisar.
 4. **SoundFonts** en `soundfonts/`. Se numeran por orden alfabético, así que
    conviene ponerles un prefijo fijo: `000-GeneralUser.sf2`, `001-…`.
+5. **Lo que elijas con `.golem` no se guarda.** El motor, la ROM y el SoundFont
+   que cambies desde el Next duran hasta que la Pi se apaga o se reinicia;
+   después vuelve a lo que diga `mt32-pi.cfg`: `default_synth` en `[system]`
+   (`mt32` o `soundfont`), `rom_set` en `[mt32emu]` (`old`, `new`, `cm32l` o
+   `any`) y `soundfont` en `[fluidsynth]` (el número). Cambia ahí los valores si
+   quieres otros por defecto. El motor no importa si usas `.mt32` o `.gm`, que lo
+   eligen cada vez.
 
 ## 4. Instalar en el Next
 
@@ -122,11 +129,12 @@ experimental `$2D`; el definitivo se pedirá a los responsables de NextZXOS.
 | Orden | Qué hace |
 | --- | --- |
 | `.golem play fichero.mid` | Reproduce un MIDI (SMF 0 o 1, hasta 24 pistas y 1 MB). SPACE lo cancela. |
-| `.golem note <nota> <vel> <seg> [canal]` | Toca una nota de prueba: nota 0–127, velocidad 1–127, 1–60 segundos, canal 1–16 (1 si no se indica). |
-| `.golem status` | Comprueba el driver y pregunta al Golem su motor, ROM y SoundFont, p. ej. «Golem: engine MT-32; ROM new; SoundFont 0». Si no contesta en 0,2 s dice «no answer». |
+| `.golem note <nota> <vel> <seg> [canal]` | Toca una nota de prueba: nota 0–127, velocidad 1–127, 1–60 segundos, canal 1–16 (1 si no se indica). Con el motor MT-32 usa los canales 2–10: el 1 no suena. |
+| `.golem status` | Comprueba el driver y pregunta al Golem su motor, ROM y SoundFont, p. ej. «Golem: engine MT-32; ROM new; SoundFont 0». Si no contesta en 0,2 s dice «no answer». «RX errors» indica que se han recibido bytes con error. |
 | `.golem engine mt32` / `fluidsynth` | Cambia el motor de la Pi: MT-32 (Munt) o General MIDI (FluidSynth). |
 | `.golem soundfont <0-127>` | Elige el SoundFont de FluidSynth por número. |
 | `.golem rom old` / `new` / `cm32l` | Elige las ROM: MT-32 antiguo, MT-32 nuevo o CM-32L. |
+| `.golem output golem` / `left` / `right` | Elige por dónde sale el MIDI: el Golem (conector del Accelerator, lo normal) o la patilla 7 del puerto de joystick izquierdo o derecho, para un sintetizador externo. Sin palabra, dice cuál está elegida. |
 
 - `.mt32` y `.gm` aceptan las mismas órdenes. Antes de `play` y `note` piden a
   la Pi el motor MT-32 o FluidSynth y esperan a que esté listo; si ya lo está,
@@ -146,6 +154,11 @@ experimental `$2D`; el definitivo se pedirá a los responsables de NextZXOS.
   cargar.
 - **No toques música mientras la Pi cambia de SoundFont:** durante la carga
   no atiende el puerto y podría perder datos.
+- `output` vale para todo lo que use el driver (`.golem`, `.gsq` y los
+  juegos) hasta reiniciar o desinstalar el driver; para dejarlo fijo, ponlo en
+  el autoexec después de `.install`. Mientras suena música, el puerto de
+  joystick elegido no funciona como joystick (el otro sí). Con salida por
+  joystick, `.mt32` y `.gm` no preguntan al Golem y tocan directamente.
 - Los errores se devuelven a BASIC como informes de error normales (por
   ejemplo «Golem: GOLEM.DRV missing or incompatible»), así que se pueden tratar con
   `ON ERROR`. Los mensajes de los comandos están en inglés.

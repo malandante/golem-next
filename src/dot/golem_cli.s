@@ -47,6 +47,7 @@ CMD_STATUS      equ 2
 CMD_ENGINE      equ 3
 CMD_SOUNDFONT   equ 4
 CMD_ROMSET      equ 5
+CMD_OUTPUT      equ 6
 
 ST_CURSOR       equ 0           ; 24-bit file offsets (#14)
 ST_END          equ 3
@@ -116,6 +117,8 @@ start:
         jp z,command_golem_control
         cp CMD_ROMSET
         jp z,command_golem_control
+        cp CMD_OUTPUT
+        jp z,command_output
 
         call turbo_on
         call save_mmus
@@ -138,6 +141,8 @@ start:
         jp c,engine_failed
         call clean_synth
         jp c,play_failed
+        ld hl,msg_playing
+        call print_z
 
         call play_smf
         jp c,play_failed
@@ -147,9 +152,45 @@ start:
 command_status:
         call show_status
         jp c,error_driver
+        call print_output
         call query_golem
         jp c,exit_error
         jp exit_success
+
+; .golem output [golem|left|right] (#64): where the driver sends MIDI from the
+; next ACQUIRE on. golem: the Accelerator header (UART and I2S); left/right: pin
+; 7 of a joystick port, for an external synth. Without a word it only reports.
+command_output:
+        ld a,(output_choice)
+        cp $ff
+        jp z,.show
+        ld e,a
+        ld c,MT32_DRIVER_ID
+        ld b,MT32_FN_SET_OUTPUT
+        rst $08
+        db NEXTZXOS_M_DRVAPI
+        jp c,error_driver       ; A=0: driver older than ABI 0.3
+        call query_driver
+        jp c,error_driver
+.show:
+        call print_output
+        ld hl,msg_crlf
+        jp exit_success
+
+; Prints "; output golem|left|right" from QUERY H (driver_caps+1).
+print_output:
+        ld hl,msg_output
+        call print_z
+        ld a,(driver_caps+1)
+        ld hl,text_output_golem
+        or a
+        jp z,.print
+        ld hl,text_output_left
+        cp MT32_NR0B_LEFT
+        jp z,.print
+        ld hl,text_output_right
+.print:
+        jp print_z
 
 command_note:
         ld c,MT32_DRIVER_ID

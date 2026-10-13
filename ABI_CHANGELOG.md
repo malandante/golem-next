@@ -8,6 +8,23 @@ La ABI se identifica por `DE` en `QUERY` (`MT32_ABI_VERSION`, mayor.menor) y por
 las capacidades de `HL`. Contrato completo: [docs/driver-api.md](docs/driver-api.md).
 Hasta M6 los números pueden cambiar y el ID `$2D` sigue siendo experimental.
 
+## 0.3, 2026-10-12 (#64)
+
+- Nueva función `SET_OUTPUT=7`: `E=0` conector del Accelerator (Golem), `1`
+  joystick izquierdo, `2` derecho. Vale desde el siguiente `ACQUIRE` y mientras
+  el driver esté instalado.
+- `QUERY` devuelve `DE=$0003`; las capacidades pasan a `L` y `H` lleva el
+  valor de NextReg `$0B` que escribirá `ACQUIRE` (`0`, `$A1` o `$B1`).
+- Capacidad `MT32_CAP_OUTPUT_SELECT` (`$0004`).
+- `ACQUIRE` guarda y escribe NextReg `$0B`; con salida por joystick no toca
+  `$A2`. `RELEASE` restaura `$0B`.
+- `STATUS` devuelve en `B` el byte de estado del UART (`$133B`) sin tocar,
+  con los bits de error de recepción y de *break* (#17); `C` no cambia.
+
+Un cliente de 0.2 no necesita cambios: las funciones 0 a 6 no cambian, el
+mayor sigue siendo 0, y quien lea las capacidades de `L` (o de `HL` con el
+byte alto a cero, como en 0.2) sólo debe dejar de esperar `H=0`.
+
 ## 0.2, revisión del 2026-10-05 (#35)
 
 Sin cambios de interfaz: mismas funciones, números, códigos de error,

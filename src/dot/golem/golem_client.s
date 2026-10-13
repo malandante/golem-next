@@ -62,6 +62,9 @@ select_engine:
         ld a,CLI_ENGINE
         or a
         ret z
+        ld a,(driver_caps+1)    ; output on a joystick port: external synth,
+        or a                    ; no Golem to ask (#64)
+        ret nz
         ld a,(driver_caps)
         and MT32_CAP_RX_NONBLOCKING
         ret z                   ; AND clears carry
@@ -371,7 +374,6 @@ query_golem:
         ret nz
         ld hl,err_transport
         ret
-
 ; golem_status: capabilities (2), availability (bit 0 MT-32, bit 1
 ; FluidSynth), engine (0 MT-32, 1 FluidSynth, $7F none), ROM set (0 old,
 ; 1 new, 2 CM-32L, $7F none), SoundFont index (14 bits, $3FFF none).

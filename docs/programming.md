@@ -255,13 +255,19 @@ with `A` = code (`A` = 0: function not supported or no driver).
 
 | `B` | Function | Input | Output |
 | --- | --- | --- | --- |
-| 0 | QUERY | — | `BC` = `"MT"`, `DE` = ABI version (`$0002`), `HL` = capabilities (bit 0 partial write, bit 1 non-blocking read) |
-| 1 | ACQUIRE | — | Exclusive use: sets the Pi UART to 31250 8N1 and turns on I²S audio from the Pi |
+| 0 | QUERY | — | `BC` = `"MT"`, `DE` = ABI version (`$0003`), `L` = capabilities (bit 0 partial write, bit 1 non-blocking read, bit 2 output select), `H` = output (0 Golem, else a joystick port) |
+| 1 | ACQUIRE | — | Exclusive use: sets the Pi UART to 31250 8N1 and routes it to the chosen output; with the Golem, also turns on I²S audio from the Pi |
 | 2 | WRITE | buffer, `DE` = length | `BC` = bytes taken (at most 16), `HL`/`DE` = what is left |
-| 3 | STATUS | — | `BC`: bit 0 acquired, bit 1 TX full, bit 2 TX empty, bit 3 RX has data |
+| 3 | STATUS | — | `C`: bit 0 acquired, bit 1 TX full, bit 2 TX empty, bit 3 RX has data; `B`: the raw UART status byte (bit 7 line in break, 6 framing error, 5 byte after an error, 2 RX overflow) |
 | 4 | DRAIN_STATUS | — | `BC` = `$FFFF` when everything has left |
 | 5 | RELEASE | — | Gives the UART and I²S settings back as they were |
 | 6 | READ | buffer, `DE` = room | `BC` = bytes received (at most 16) |
+| 7 | SET_OUTPUT | `E` = 0 Golem (Accelerator header), 1 left joystick port, 2 right | — (from the next ACQUIRE on) |
+
+A game does not need `SET_OUTPUT`: the user chooses the output once with
+`.golem output`, and every program that acquires the driver follows it. Read
+`H` from `QUERY` if the game wants to know (for example, to avoid that joystick
+port while music plays).
 
 Errors: 1 busy (another program has it), 2 not acquired, 3 invalid parameter.
 

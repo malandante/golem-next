@@ -10,6 +10,8 @@ show_status:
         ret c
         ld a,c
         ld (status_flags),a
+        ld a,b
+        ld (status_uart),a
         bit 0,a
         ld hl,msg_status_free
         jp z,.owner_ready
@@ -26,6 +28,10 @@ show_status:
         ld hl,msg_status_active
 .tx_ready:
         call print_z
+        ld a,(status_uart)      ; framing, byte after an error, overflow (#17)
+        and $64
+        ld hl,msg_status_rx_errors
+        call nz,print_z
         or a
         ret
 

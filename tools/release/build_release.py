@@ -105,7 +105,8 @@ def build(assembler: str, path: str, tree: Path, out: Path) -> None:
 
 def check(out: Path) -> None:
     driver = (out / "nextzxos" / "GOLEM.DRV").read_bytes()
-    if len(driver) != 600 or driver[:4] != b"NDRV":
+    # 8-byte header, 512-byte resident image, 2 bytes per relocation entry.
+    if driver[:4] != b"NDRV" or len(driver) != 8 + 512 + 2 * driver[5]:
         sys.exit(f"GOLEM.DRV: {len(driver)} bytes, signature {driver[:4]!r}")
     for name in DOTS:
         size = (out / "dot" / name).stat().st_size

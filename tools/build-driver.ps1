@@ -20,16 +20,18 @@ try {
 
 $driver = Get-Item (Join-Path $build 'GOLEM.DRV')
 $resident = Get-Item (Join-Path $build 'mt32drv.bin')
-if ($resident.Length -ne 592) {
-    throw "Unexpected resident+relocation size: $($resident.Length), expected 592"
-}
-if ($driver.Length -ne 600) {
-    throw "Unexpected GOLEM.DRV size: $($driver.Length), expected 600"
-}
 $bytes = [IO.File]::ReadAllBytes($driver.FullName)
 $signature = [Text.Encoding]::ASCII.GetString($bytes, 0, 4)
 if ($signature -ne 'NDRV') { throw "Invalid .DRV signature: $signature" }
-if ($bytes[5] -ne 40) { throw "Unexpected relocation count in header: $($bytes[5])" }
+# Sizes follow the relocation count in the header (tools/ci/check_driver_relocations.py
+# checks that it matches the table): 512-byte resident image + 2 bytes per entry.
+$expected = 512 + 2 * $bytes[5]
+if ($resident.Length -ne $expected) {
+    throw "Unexpected resident+relocation size: $($resident.Length), expected $expected"
+}
+if ($driver.Length -ne $expected + 8) {
+    throw "Unexpected GOLEM.DRV size: $($driver.Length), expected $($expected + 8)"
+}
 for ($index = 0; $index -lt $bytes[5]; $index++) {
     $offset = 8 + 512 + (2 * $index)
     $relocation = $bytes[$offset] + (256 * $bytes[$offset + 1])

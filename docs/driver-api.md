@@ -1,6 +1,6 @@
 # ABI experimental de transporte `GOLEM.DRV`
 
-Estado: ABI 0.2 de trabajo para M2/M7. Los números de función pueden cambiar hasta
+Estado: ABI 0.3 de trabajo para M2/M7. Los números de función pueden cambiar hasta
 M6. El ID `$2D` es exclusivamente experimental: no está asignado por NextZXOS y
 no debe publicarse como definitivo.
 
@@ -18,13 +18,35 @@ función no soportada según la convención oficial.
 
 | B | Operación | Entrada | Salida |
 |---:|---|---|---|
-| 0 | QUERY | — | `BC="MT"`, `DE=$0002`, `HL` capacidades |
-| 1 | ACQUIRE | — | Adquiere en exclusiva, configura UART Pi a 31250, 8N1 según NextReg `$11` y activa la recepción I²S de la Pi (NextReg `$A2=$D2`) |
+| 0 | QUERY | — | `BC="MT"`, `DE=$0003`, `L` capacidades, `H` valor de NextReg `$0B` que escribirá `ACQUIRE` (0: conector del Accelerator) |
+| 1 | ACQUIRE | — | Adquiere en exclusiva, configura UART Pi a 31250, 8N1 según NextReg `$11`, escribe NextReg `$0B` según `SET_OUTPUT` y, sólo con salida al conector, activa la recepción I²S de la Pi (NextReg `$A2=$D2`) |
 | 2 | WRITE | `HL` buffer visible, `DE` longitud | `BC` aceptados, `HL` avanzado, `DE` restante |
-| 3 | STATUS | — | `BC`: bit 0 adquirido, bit 1 TX llena, bit 2 TX vacía, bit 3 RX con datos; siempre del UART Pi |
+| 3 | STATUS | — | `C`: bit 0 adquirido, bit 1 TX llena, bit 2 TX vacía, bit 3 RX con datos. `B`: byte de estado del UART (puerto `$133B`) tal cual; siempre del UART Pi |
 | 4 | DRAIN_STATUS | — | `BC=$FFFF` si FIFO TX vacía; `0` si no |
 | 5 | RELEASE | — | Libera y restaura el estado legible |
 | 6 | READ | `HL` destino visible, `DE` capacidad | `BC` recibidos, `HL` avanzado, `DE` restante |
+| 7 | SET_OUTPUT | `E`: 0 conector del Accelerator (Golem), 1 joystick izquierdo, 2 derecho | — ; `INVALID` si `E>2` |
+
+`B` de `STATUS` (#17) es el estado del UART sin interpretar, con los bits de
+[ports.txt](https://gitlab.com/SpectrumNext/ZX_Spectrum_Next_FPGA/-/raw/master/cores/zxnext/ports.txt):
+bit 7 la línea de recepción está en *break* (a cero 20 bits o más; con la
+Pi apagada no ocurre: la línea queda en reposo, comprobado el 2026-10-13), bit 6 error de trama o de paridad, bit 5 el siguiente byte recibido
+llegó después de un error (trama o desbordamiento), bit 3 RX casi llena,
+bit 2 RX desbordada. Los bits 6 y 2 se borran al leer el estado, y `WRITE`,
+`READ` y `DRAIN_STATUS` también lo leen: `STATUS` sólo los ve si el error
+ocurrió desde la última llamada. El bit 5 no se borra así: marca el byte
+afectado hasta que se lee. Constantes `MT32_UART_RX_*` en `mt32_api.inc`.
+
+`SET_OUTPUT` (#64) elige por dónde sale el UART de la Pi a partir del
+siguiente `ACQUIRE`, y dura mientras el driver esté instalado (al instalarlo
+vale 0). Con 1 o 2, `ACQUIRE` escribe NextReg `$0B` = `$A1` o `$B1` (modo E/S
+de joystick, UART en ese puerto, UART de la Pi): Tx sale por la patilla 7 y Rx
+entra por la 9. Con 0 escribe `$0B=0`. Con salida por joystick no toca `$A2`,
+porque el sonido sale del sintetizador externo. `RELEASE` restaura `$0B`
+junto con `$A0` y `$A2`. Puede llamarse adquirido o no; un cambio con la
+sesión abierta vale para la siguiente. Mientras está adquirido con salida por
+joystick, ese puerto no funciona como joystick. Capacidad
+`MT32_CAP_OUTPUT_SELECT` (`$0004`).
 
 ## Requisitos del llamador
 
@@ -59,8 +81,8 @@ función no soportada según la convención oficial.
 - **UART.** Entre llamadas, el cliente o un tercero puede seleccionar el ESP:
   cada función vuelve a seleccionar la Pi y deja la selección como la encontró.
 - **NextRegs.** Mientras está adquirido, el driver ha cambiado `$A0` (UART a la
-  Pi) y `$A2` (I²S de la Pi). `RELEASE` los restaura, junto con el selector de
-  NextReg.
+  Pi), `$0B` (salida por joystick o ninguna) y, con salida al conector, `$A2`
+  (I²S de la Pi). `RELEASE` los restaura, junto con el selector de NextReg.
 
 Cambios de versión: [ABI_CHANGELOG.md](../ABI_CHANGELOG.md).
 

@@ -13,6 +13,7 @@ saved_mmu3:             db 0
 exit_failed:            db 0
 exit_message:           dw 0
 command_mode:           db 0
+output_choice:          db 0    ; .golem output: MT32_OUTPUT_*, $ff = report
 file_handle:            db 0
 file_open:              db 0
 driver_acquired:        db 0
@@ -70,6 +71,7 @@ event_status:           db 0
 write_idle:             db 0
 cleanup_channel:        db 0
 status_flags:           db 0
+status_uart:            db 0    ; raw $133B from STATUS (#17)
 cleanup_midi:           db 0
 golem_command:          db 0
 golem_value:            db 0
@@ -100,6 +102,7 @@ msg_usage:
         db "       .golem engine mt32|fluidsynth",$0d
         db "       .golem soundfont <0-127>",$0d
         db "       .golem rom old|new|cm32l",$0d
+        db "       .golem output [golem|left|right]",$0d
         db "       .mt32/.gm: the same; play and note",$0d
         db "       first set the MT-32/GM engine",$0d,0
 ; Error reports: the last character carries bit 7 (NextZXOS convention).
@@ -125,6 +128,8 @@ err_transport:
         db "Golem: transport error or timeou",'t'+$80
 msg_loading:
         db $0d,"Golem: loading",0
+msg_playing:
+        db $0d,"Golem: playing (SPACE stops)",0
 msg_cancelled:
         db $0d,"Golem: playback cancelled",$0d,0
 msg_done:
@@ -147,6 +152,8 @@ msg_status_empty:
         db "TX empty",0
 msg_status_active:
         db "TX busy",0
+msg_status_rx_errors:
+        db "; RX errors",0
 msg_golem_no_rx:
         db $0d,"Golem: not queried (driver has no RX)",$0d,0
 msg_golem_busy:
@@ -198,5 +205,21 @@ text_new:
         db "new",0
 text_cm32l:
         db "cm32l",0
+kw_utput:
+        db "utput",0
+text_golem:
+        db "golem",0
+text_left:
+        db "left",0
+text_right:
+        db "right",0
+msg_output:
+        db $0d,"Golem: output ",0
+text_output_golem:
+        db "Golem (Accelerator header)",0
+text_output_left:
+        db "left joystick port, pin 7",0
+text_output_right:
+        db "right joystick port, pin 7",0
 
 binary_end:

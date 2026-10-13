@@ -26,7 +26,7 @@ api_entry:
         jr z,acquire
         dec a
 reloc_dispatch_write:
-        jp z,write
+        jp z,xfer
         dec a
 reloc_dispatch_status:
         jp z,status
@@ -38,7 +38,10 @@ reloc_dispatch_release:
         jp z,release
         dec a
 reloc_dispatch_read:
-        jp z,read
+        jp z,xfer
+        dec a
+reloc_dispatch_set_output:
+        jp z,set_output
 
 unsupported:
         xor a                   ; A=0 is the NextZXOS unsupported-call result
@@ -46,18 +49,24 @@ unsupported:
         ret
 
 ; B=0 QUERY
-; Out: BC="MT", DE=$0002, HL=capabilities.
+; Out: BC="MT", DE=$0003, L=capabilities, H=NextReg $0B value that ACQUIRE
+; writes (0: Accelerator header, the Golem; else a joystick port).
 query:
         ld bc,MT32_SIGNATURE
         ld de,MT32_ABI_VERSION
-        ld hl,MT32_CAP_PARTIAL_WRITE | MT32_CAP_RX_NONBLOCKING
+reloc_query_mode:
+        ld a,(out_mode)
+        ld h,a
+        ld l,MT32_CAP_PARTIAL_WRITE | MT32_CAP_RX_NONBLOCKING | MT32_CAP_OUTPUT_SELECT
         or a
         ret
 
 ; B=1 ACQUIRE
 ; Saves all readable state affected by this driver, selects the Pi UART,
-; configures 31250 baud 8N1 and enables I2S reception from the Pi (NextReg
-; $A2). The Pi UART divisor is write-only; RELEASE leaves it at 31250.
+; configures 31250 baud 8N1, writes NextReg $0B from SET_OUTPUT (0 for the
+; header; a joystick port carries the Pi UART otherwise) and, for the header
+; only, enables I2S reception from the Pi (NextReg $A2). The Pi UART divisor
+; is write-only; RELEASE leaves it at 31250.
 acquire:
 reloc_acquire_read:
         ld a,(acquired)
@@ -86,8 +95,23 @@ reloc_save_nextreg_a0:
         in a,(c)
 reloc_save_nextreg_a2:
         ld (saved_nextreg_a2),a
+reloc_acquire_mode:
+        ld a,(out_mode)
+        ld e,a                  ; E=NextReg $0B value, 0 for the header
+        or a
         ld a,I2S_FROM_PI
+        jr nz,acquire_no_i2s    ; joystick: the synth is external, keep $A2
         out (c),a
+acquire_no_i2s:
+        dec b                   ; $243b: joystick I/O mode
+        ld a,$0b
+        out (c),a
+        inc b
+        in a,(c)
+reloc_save_nextreg_0b:
+        ld (saved_nextreg_0b),a
+        ld a,e
+        out (c),a               ; header: 0, joysticks as usual
 
         dec b                   ; $243b: select system-clock register
         ld a,$11
@@ -144,50 +168,76 @@ reloc_acquire_write:
         or a
         ret
 
-; B=2 WRITE
-; In: HL=visible buffer ($4000..$ffff), DE=length.
-; Out: BC=accepted prefix (0..16). Never waits for FIFO capacity.
-write:
-reloc_write_check:
+; B=2 WRITE and B=6 READ share one path; only the inner loop differs, so the
+; per-byte cost of each is unchanged.
+; WRITE In: HL=visible buffer ($4000..$ffff), DE=length.
+;       Out: BC=accepted prefix (0..16). Never waits for FIFO capacity.
+; READ  In: HL=visible destination buffer ($4000..$ffff), DE=capacity.
+;       Out: BC=received prefix (0..16). Never waits for RX data and never
+;       reads an empty FIFO.
+; Both: HL advanced, DE remaining.
+xfer:
+reloc_xfer_check:
         ld a,(acquired)
         or a
-reloc_write_not_acquired:
+reloc_xfer_not_acquired:
         jp z,error_not_acquired
         ld a,h
         cp $40
-reloc_write_invalid:
+reloc_xfer_invalid:
         jp c,error_invalid
-reloc_write_enter:
+        push bc                 ; B=function (2 WRITE, 6 READ)
+reloc_xfer_enter:
         call pi_enter
         ld a,d                  ; A=min(DE,16)
         or a
-        ld a,MT32_MAX_WRITE
-        jr nz,write_budget
+        ld a,MT32_MAX_WRITE     ; MT32_MAX_READ is the same 16
+        jr nz,xfer_budget
         ld a,e
         cp MT32_MAX_WRITE
-        jr c,write_budget
+        jr c,xfer_budget
         ld a,MT32_MAX_WRITE
-write_budget:
+xfer_budget:
+        pop bc                  ; B=function
         push de                 ; requested length
         ld e,a                  ; E=bytes still allowed, D=bytes moved
+        or a                    ; Z: nothing to move
         ld d,0
+        ld a,b
         ld bc,UART_TX
-        or a
-        jr z,write_end
+        jr z,xfer_end
+        cp MT32_FN_READ
+        jr z,read_loop
 write_loop:
         in a,(c)                ; BC=UART_TX: status
         and 2                   ; TX FIFO full: zero progress is not an error
-        jr nz,write_end
+        jr nz,xfer_end
         ld a,(hl)
         out (c),a
         inc d
         inc hl
         ld a,h                  ; stop before wrapping into driver/ROM space
         or l
-        jr z,write_end
+        jr z,xfer_end
         dec e
         jr nz,write_loop
-write_end:
+        jr xfer_end
+read_loop:
+        in a,(c)                ; BC=UART_TX: status
+        and 1                   ; do not consume RX when its FIFO is empty
+        jr z,xfer_end
+        inc b                   ; $143B: RX data
+        in a,(c)
+        dec b
+        ld (hl),a
+        inc d
+        inc hl
+        ld a,h                  ; stop before wrapping into driver/ROM space
+        or l
+        jr z,xfer_end
+        dec e
+        jr nz,read_loop
+xfer_end:
         ld c,d
         ld b,0                  ; BC=bytes moved
         ex (sp),hl              ; HL=requested length, stack=pointer
@@ -195,12 +245,13 @@ write_end:
         sbc hl,bc
         ex de,hl                ; DE=remaining
         pop hl                  ; HL=advanced pointer
-reloc_write_leave:
+reloc_xfer_leave:
         jp pi_leave
 
 ; B=3 STATUS
-; Out: BC bit 0=acquired, bit 1=TX FIFO full, bit 2=TX FIFO empty,
-;             bit 3=RX data available. Always reports the Pi UART.
+; Out: C bit 0=acquired, bit 1=TX FIFO full, bit 2=TX FIFO empty,
+;            bit 3=RX data available. B=raw UART status byte ($133B).
+;      Always reports the Pi UART.
 status:
 reloc_status_enter:
         call pi_enter
@@ -228,6 +279,8 @@ status_rx:
         jr z,status_done
         set 3,c
 status_done:
+        ld b,d                  ; B=raw $133B status (#17): bit 7 break, 6 framing,
+                                ; 5 byte after an error, 2 overflow (6 and 2 clear on read)
 reloc_status_leave:
         jp pi_leave
 
@@ -252,8 +305,8 @@ reloc_drain_leave:
         jp pi_leave
 
 ; B=5 RELEASE
-; Restores readable configuration: UART selection and frame, NextReg $A0, $A2
-; and selector. No prescaler bit is written, so the Pi divisor stays a
+; Restores readable configuration: UART selection and frame, NextReg $A0, $A2,
+; $0B and selector. No prescaler bit is written, so the Pi divisor stays a
 ; coherent 31250 and the ESP divisor is never touched (docs/driver-api.md).
 release:
 reloc_release_check:
@@ -274,20 +327,20 @@ reloc_restore_uart_select:
         ld bc,NEXTREG_SELECT
         in a,(c)
         ld d,a
-        ld a,$a0
+reloc_release_table:
+        ld hl,nextreg_restore   ; pairs: register, saved value
+        ld e,3
+release_nextreg:
+        ld a,(hl)
         out (c),a
-        inc b
-reloc_restore_nextreg_a0:
-        ld a,(saved_nextreg_a0)
-        out (c),a
-        dec b
-        ld a,$a2
-        out (c),a
-        inc b
-reloc_restore_nextreg_a2:
-        ld a,(saved_nextreg_a2)
+        inc hl
+        inc b                   ; $253b
+        ld a,(hl)
         out (c),a
         dec b
+        inc hl
+        dec e
+        jr nz,release_nextreg
         ld a,d
         out (c),a
 
@@ -309,62 +362,24 @@ error_invalid:
         scf
         ret
 
-; B=6 READ
-; In: HL=visible destination buffer ($4000..$ffff), DE=capacity.
-; Out: BC=received prefix (0..16), HL advanced, DE remaining.
-; Never waits for RX data and never reads an empty FIFO.
-read:
-reloc_read_check:
-        ld a,(acquired)
-        or a
-reloc_read_not_acquired:
-        jp z,error_not_acquired
-        ld a,h
-        cp $40
-reloc_read_invalid:
-        jp c,error_invalid
-reloc_read_enter:
-        call pi_enter
-        ld a,d                  ; A=min(DE,16)
-        or a
-        ld a,MT32_MAX_READ
-        jr nz,read_budget
+; B=7 SET_OUTPUT
+; In: E=MT32_OUTPUT_GOLEM (0, Accelerator header), _LEFT (1) or _RIGHT (2).
+; Takes effect at the next ACQUIRE and lasts while the driver is installed.
+set_output:
         ld a,e
-        cp MT32_MAX_READ
-        jr c,read_budget
-        ld a,MT32_MAX_READ
-read_budget:
-        push de                 ; requested length
-        ld e,a                  ; E=bytes still allowed, D=bytes moved
-        ld d,0
-        ld bc,UART_TX
+        cp 3
+        jr nc,error_invalid
         or a
-        jr z,read_end
-read_loop:
-        in a,(c)                ; BC=UART_TX: status
-        and 1                   ; do not consume RX when its FIFO is empty
-        jr z,read_end
-        inc b                   ; $143B: RX data
-        in a,(c)
-        dec b
-        ld (hl),a
-        inc d
-        inc hl
-        ld a,h                  ; stop before wrapping into driver/ROM space
-        or l
-        jr z,read_end
-        dec e
-        jr nz,read_loop
-read_end:
-        ld c,d
-        ld b,0                  ; BC=bytes moved
-        ex (sp),hl              ; HL=requested length, stack=pointer
-        or a
-        sbc hl,bc
-        ex de,hl                ; DE=remaining
-        pop hl                  ; HL=advanced pointer
-reloc_read_leave:
-        jp pi_leave
+        jr z,set_output_store
+        add a,a
+        add a,a
+        add a,a
+        add a,a
+        add a,$91               ; 1: $A1 left, 2: $B1 right (UART, Pi UART)
+set_output_store:
+reloc_set_output:
+        ld (out_mode),a         ; carry is clear on both paths
+        ret
 
 ; Select the Pi UART for one call and remember the caller's selection, so that
 ; another UART user (for example the ESP) between calls cannot divert MIDI.
@@ -394,15 +409,24 @@ acquired:
         db 0
 saved_nextreg_selector:
         db 0
-saved_nextreg_a0:
-        db 0
 saved_uart_select:
         db 0
 saved_uart_frame:
         db 0
+caller_select:
+        db 0
+out_mode:
+        db 0                    ; NextReg $0B while acquired; 0 = header
+; RELEASE restores these in order: register number, then the saved value.
+nextreg_restore:
+        db $a0
+saved_nextreg_a0:
+        db 0
+        db $a2
 saved_nextreg_a2:
         db 0
-caller_select:
+        db $0b
+saved_nextreg_0b:
         db 0
 
 ; Fsys / 31250 for NextReg $11 values 0..7, rounded as in the official UART
@@ -429,30 +453,29 @@ reloc_start:
         dw reloc_save_uart_select+2
         dw reloc_save_uart_frame+2
         dw reloc_acquire_write+2
-        dw reloc_write_check+2
-        dw reloc_write_not_acquired+2
-        dw reloc_write_invalid+2
+        dw reloc_xfer_check+2
+        dw reloc_xfer_not_acquired+2
+        dw reloc_xfer_invalid+2
         dw reloc_status_acquired+2
         dw reloc_drain_check+2
         dw reloc_drain_not_acquired+2
         dw reloc_release_check+2
         dw reloc_restore_uart_frame+2
         dw reloc_restore_uart_select+2
-        dw reloc_restore_nextreg_a0+2
         dw reloc_release_write+2
-        dw reloc_read_check+2
-        dw reloc_read_not_acquired+2
-        dw reloc_read_invalid+2
         dw reloc_save_nextreg_a2+2
-        dw reloc_restore_nextreg_a2+2
-        dw reloc_write_enter+2
-        dw reloc_write_leave+2
+        dw reloc_xfer_enter+2
+        dw reloc_xfer_leave+2
         dw reloc_status_enter+2
         dw reloc_status_leave+2
         dw reloc_drain_enter+2
         dw reloc_drain_leave+2
-        dw reloc_read_enter+2
-        dw reloc_read_leave+2
         dw reloc_save_caller_select+2
         dw reloc_restore_caller_select+2
+        dw reloc_dispatch_set_output+2
+        dw reloc_query_mode+2
+        dw reloc_acquire_mode+2
+        dw reloc_save_nextreg_0b+2
+        dw reloc_release_table+2
+        dw reloc_set_output+2
 reloc_end:

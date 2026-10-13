@@ -18,18 +18,39 @@ capture or a measurement on real hardware. The evidence is in this repository.
 | 2026-10-07 | **`.GOLEM`, `.MT32` and `.GM`:** one command; the aliases switch the Golem engine first and fall back to any MIDI synth; `status` asks the Golem for its state. | Z80 harness runs with and without Golem replies; checked on the Next |
 | 2026-10-08 | **Analyser captures on the Next:** byte-exact output, 31250 baud, event intervals exact to 0.05 ms at 50 and 60 Hz; MIDI out through the joystick port measured at 3.3 V. | [`tests/hardware/results/2026-10-08-joystick/`](tests/hardware/results/2026-10-08-joystick/README.md) |
 | 2026-10-08 | **Release 1.0.0:** reproducible SD package with SHA-256 sums; Golem firmware release with its source. | [`RELEASE_NOTES.md`](RELEASE_NOTES.md), `tools/release/build_release.py` |
+| 2026-10-13 | **MIDI out through a joystick port** (`.golem output`), driver ABI 0.3 with receive errors in `STATUS`. | Analyser captures on the Next ([`tests/hardware/results/2026-10-13-joystick-output/`](tests/hardware/results/2026-10-13-joystick-output/README.md)); driver checks in a Z80 simulator in CI |
+| 2026-10-13 | **Release 1.1.0.** | [`RELEASE_NOTES.md`](RELEASE_NOTES.md) |
 
-## Next: 1.1
+## Next: 1.2
 
-- **MIDI out through the joystick port**, for any MIDI synthesiser without a
-  Pi: output selection in the driver, a cable diagram for the 3.3 V output, and
+- **A cable for the joystick MIDI output:** a diagram for the 3.3 V signal and
   a test with a real synthesiser.
 - **Official driver ID** from the NextZXOS maintainers, replacing the
   experimental `$2D`.
 - **Golem side on the analyser:** its UART replies and the I²S stream, and the
   same tests on a Raspberry Pi 4.
+- **Pause in `.golem play`** (P), as in `.GSQ`: silence the synth, and on
+  resume restore each channel's volume and the notes that were sounding.
 - **Stress tests on hardware:** large SysEx dumps, dense tracks, slow SD cards,
   a Pi that is off or restarts, driver reinstalls.
+- **MIDI held while the Golem switches engine**, once games can ask for engine
+  changes through the GSEQ library.
+- **Firmware:** control buttons on configurable GPIO pins, and capability bits
+  in the Golem status for optional hardware.
+
+## Then: an OPL3 engine
+
+What the Golem plays: a third engine next to MT-32 and General MIDI, an
+emulated Yamaha OPL3 for the FM sound of AdLib and Sound Blaster music, on
+every supported Pi from the Pi 3 on. The first step is measuring the CPU cost
+of the candidate emulators on a Pi 3; the result decides which one ships.
+
+## After that: interactive music for games
+
+How it is played, in the spirit of iMUSE: GSEQ songs with sections and markers,
+and a game that asks for a change of music lands it on a musical point, with
+jumps, layers and transitions. The GSEQ format already reserves its records, so
+1.0 files stay valid.
 
 ## Known issues
 
@@ -40,10 +61,12 @@ capture or a measurement on real hardware. The evidence is in this repository.
 
 ## Later
 
-- **Interactive music for games**, in the spirit of iMUSE: jumps between
-  sections at musical points, layers and transitions. The GSEQ format already
-  reserves its records, so 1.0 files stay valid.
-- **The driver holds MIDI while the Golem switches engine** and reports
-  receive errors to the caller.
 - **A cooperative player for `.MID` files** inside games, for music that is not
   converted to GSEQ.
+- **MIDI out to real synthesisers through the Golem:** the firmware forwards
+  what the Next sends to a USB-MIDI interface on the Pi, so a hardware MT-32 or
+  SC-55 can play along.
+- **Hardware flow control** (RTS/CTS) on the link, for faster transfers to the
+  Pi.
+- **NextPi and the Golem on the same Pi**, chosen by swapping the SD card or by
+  a button at boot.

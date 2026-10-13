@@ -2,7 +2,7 @@
 ; Included by src/dot/golem_cli.s; not assembled on its own. Uses the
 ; constants and labels defined there and in the other modules.
 ;
-; Commands: play, note, status, engine and soundfont.
+; Commands: play, note, status, engine, soundfont, rom and output.
 
 parse_command:
         ld a,h
@@ -21,6 +21,8 @@ parse_command:
         jp z,.engine
         cp 'r'
         jp z,.romset
+        cp 'o'
+        jp z,.output
         jp .bad
 
 .play:
@@ -231,6 +233,48 @@ parse_command:
         ld a,GOLEM_SYSEX_SWITCH_ROM
         ld (golem_command),a
         ld a,CMD_ROMSET
+        ld (command_mode),a
+        scf
+        ret
+.output:
+        inc hl
+        ld de,kw_utput
+        call match_word
+        jp nz,.bad
+        ld a,$ff                ; no word: report only
+        ld (output_choice),a
+        call at_command_end
+        jp c,.output_done
+        ld a,(hl)
+        cp ' '
+        jp nz,.bad
+        call skip_spaces
+        call at_command_end
+        jp c,.output_done
+        ld a,(hl)
+        or $20
+        ld de,text_golem
+        ld c,MT32_OUTPUT_GOLEM
+        cp 'g'
+        jp z,.output_word
+        ld de,text_left
+        ld c,MT32_OUTPUT_LEFT
+        cp 'l'
+        jp z,.output_word
+        ld de,text_right
+        ld c,MT32_OUTPUT_RIGHT
+        cp 'r'
+        jp nz,.bad
+.output_word:
+        call match_word
+        jp nz,.bad
+        ld a,c
+        ld (output_choice),a
+        call skip_spaces
+        call at_command_end
+        jp nc,.bad
+.output_done:
+        ld a,CMD_OUTPUT
         ld (command_mode),a
         scf
         ret

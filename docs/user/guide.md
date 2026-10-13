@@ -59,10 +59,10 @@ Pi-side pins (Pi 40-pin numbering):
 | Ground | — | 6 (or any GND) |
 | 5 V and 3.3 V | — | 2, 4, 1, 17: **isolated, not connected** |
 
-*For a 1.x version:* MIDI output through the joystick port, to drive an
-external MIDI synth without a Pi. The Next already sends MIDI there,
-at 3.3 V, but the cable and its diagram are not ready: do not wire a MIDI DIN
-cable to the joystick port yourself.
+*Joystick port:* `.golem output left` or `right` sends MIDI out of pin 7 of
+that port, for an external MIDI synth without a Pi. The signal is 3.3 V and
+the cable and its diagram are not ready: do not wire a MIDI DIN cable to the
+joystick port yourself.
 
 ## 3. Preparing the Pi
 
@@ -89,6 +89,13 @@ cable to the joystick port yourself.
    falls back to FluidSynth without telling you.
 4. **SoundFonts** in `soundfonts/`. They are numbered in alphabetical order,
    so give them a fixed prefix: `000-GeneralUser.sf2`, `001-…`.
+5. **What you select with `.golem` is not saved.** The engine, ROM set and
+   SoundFont you change from the Next last until the Pi is switched off or
+   restarts; it then goes back to `mt32-pi.cfg`: `default_synth` in `[system]`
+   (`mt32` or `soundfont`), `rom_set` in `[mt32emu]` (`old`, `new`, `cm32l` or
+   `any`) and `soundfont` in `[fluidsynth]` (the number). Change those values
+   for other defaults. The engine does not matter if you use `.mt32` or `.gm`,
+   which select it every time.
 
 ## 4. Installing on the Next
 
@@ -122,11 +129,12 @@ and puts it back as it was afterwards. It uses the experimental driver ID
 | Command | What it does |
 | --- | --- |
 | `.golem play file.mid` | Plays a MIDI file (SMF 0 or 1, up to 24 tracks and 1 MB). SPACE cancels. |
-| `.golem note <note> <vel> <sec> [channel]` | Plays a test note: note 0–127, velocity 1–127, 1–60 seconds, channel 1–16 (1 if omitted). |
-| `.golem status` | Checks the driver and asks the Golem for its engine, ROM set and SoundFont, e.g. "Golem: engine MT-32; ROM new; SoundFont 0". Without an answer within 0.2 s it says "no answer". |
+| `.golem note <note> <vel> <sec> [channel]` | Plays a test note: note 0–127, velocity 1–127, 1–60 seconds, channel 1–16 (1 if omitted). With the MT-32 engine use channels 2–10: channel 1 is silent. |
+| `.golem status` | Checks the driver and asks the Golem for its engine, ROM set and SoundFont, e.g. "Golem: engine MT-32; ROM new; SoundFont 0". Without an answer within 0.2 s it says "no answer". "RX errors" means bytes were received with errors. |
 | `.golem engine mt32` / `fluidsynth` | Switches the Pi's engine: MT-32 (Munt) or General MIDI (FluidSynth). |
 | `.golem soundfont <0-127>` | Selects the FluidSynth SoundFont by number. |
 | `.golem rom old` / `new` / `cm32l` | Selects the ROMs: old MT-32, new MT-32 or CM-32L. |
+| `.golem output golem` / `left` / `right` | Chooses where MIDI goes: the Golem (Accelerator header, the default) or pin 7 of the left or right joystick port, for an external synth. Without a word it reports the current one. |
 
 - `.mt32` and `.gm` take the same orders. Before `play` and `note` they ask
   the Pi for the MT-32 or the FluidSynth engine and wait until it is ready; if
@@ -145,6 +153,11 @@ and puts it back as it was afterwards. It uses the experimental driver ID
   is no SoundFont with that number, none on the SD card, or it cannot load.
 - **Do not play music while the Pi is switching SoundFonts:** while loading it
   does not serve the port and could lose data.
+- `output` applies to everything that uses the driver (`.golem`, `.gsq` and
+  games) until the driver is uninstalled or the Next restarts; to keep it, put
+  it in the autoexec after `.install`. While music plays, the chosen joystick
+  port does not work as a joystick (the other one does). With a joystick
+  output, `.mt32` and `.gm` do not ask the Golem and play straight away.
 - Errors are returned to BASIC as normal error reports (for example
   "Golem: GOLEM.DRV missing or incompatible"), so they can
   be handled with `ON ERROR`.
