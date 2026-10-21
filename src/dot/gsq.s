@@ -18,6 +18,7 @@ IDE_BANK        equ $01bd
 
 NEXTREG_SELECT  equ $243b
 NXR_TURBO       equ $07
+NXR_VIDEO_TIMING equ $11
 NXR_MMU3        equ $53
 NXR_MMU4        equ $54
 NXR_MMU7        equ $57
@@ -291,11 +292,13 @@ fail:
 ; ---------------------------------------------------------------- clock
 
 ; Lines per frame decide the line length: 311 or 264 lines are 128K/+3 timing
-; (228 T per line at 3.5 MHz), anything else 48K timing (224 T). ms per line
-; in 16.16 fixed point: 228/3500 -> 4269, 224/3500 -> 4194.
+; (228 T per line), anything else 48K timing (224 T). The T-state clock is the
+; system clock / 8, which depends on the video timing in NextReg $11: 3.5 MHz
+; at 28 MHz (HDMI, VGA 0), up to 4.125 MHz in VGA 6. ms per line in 16.16 fixed
+; point is T x 524288 / Fsys(kHz): 224 T at 28 MHz -> 4194.
 clock_init:
         call measure_lines
-        ld de,4194
+        ld de,line_ms_224
         ld bc,311
         or a
         sbc hl,bc
@@ -306,8 +309,21 @@ clock_init:
         sbc hl,bc
         jr nz,.ready
 .long_lines:
-        ld de,4269
+        ld de,line_ms_228
 .ready:
+        ld bc,NEXTREG_SELECT
+        ld a,NXR_VIDEO_TIMING
+        out (c),a
+        inc b
+        in a,(c)
+        and $07
+        add a,a
+        ld l,a
+        ld h,0
+        add hl,de
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
         ld (line_ms),de
         call read_raster
         ld (raster_prev),hl
@@ -315,6 +331,13 @@ clock_init:
         ld (clock_q16),hl
         ld (clock_q16+2),hl
         ret
+
+; ms per raster line (16.16, fraction only) for video timings 0-7: VGA 0-6 at
+; 28, 28.57, 29.46, 30, 31, 32 and 33 MHz, then 27 MHz.
+line_ms_224:
+        dw 4194,4110,3986,3915,3788,3670,3559,4350
+line_ms_228:
+        dw 4269,4184,4057,3985,3856,3736,3622,4427
 
 ; DE = now in ms (low 16 bits of the 16.16 clock's integer part).
 clock_now:

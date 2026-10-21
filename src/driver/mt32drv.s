@@ -65,8 +65,9 @@ reloc_query_mode:
 ; Saves all readable state affected by this driver, selects the Pi UART,
 ; configures 31250 baud 8N1, writes NextReg $0B from SET_OUTPUT (0 for the
 ; header; a joystick port carries the Pi UART otherwise) and, for the header
-; only, enables I2S reception from the Pi (NextReg $A2). The Pi UART divisor
-; is write-only; RELEASE leaves it at 31250.
+; only, enables I2S reception from the Pi (NextReg $A2) and leaves it enabled
+; after RELEASE (#107). The Pi UART divisor is write-only; RELEASE leaves it
+; at 31250.
 acquire:
 reloc_acquire_read:
         ld a,(acquired)
@@ -92,22 +93,28 @@ reloc_save_nextreg_a0:
         ld a,$a2
         out (c),a
         inc b                   ; $253b
-        in a,(c)
-reloc_save_nextreg_a2:
-        ld (saved_nextreg_a2),a
 reloc_acquire_mode:
         ld a,(out_mode)
         ld e,a                  ; E=NextReg $0B value, 0 for the header
-        or a
-        ld a,I2S_FROM_PI
-        jr nz,acquire_no_i2s    ; joystick: the synth is external, keep $A2
-        out (c),a
-acquire_no_i2s:
+        in a,(c)                ; the caller's $A2
+        inc e
+        dec e
+        jr nz,acquire_save_a2   ; joystick: the synth is external, keep $A2
+        ld a,I2S_FROM_PI        ; header: Pi audio in, and RELEASE keeps it so
+        out (c),a               ; a keyboard on the Pi sounds between programs
+acquire_save_a2:
+reloc_save_nextreg_a2:
+        ld (saved_nextreg_a2),a
         dec b                   ; $243b: joystick I/O mode
         ld a,$0b
         out (c),a
         inc b
-        in a,(c)
+        in a,(c)                ; header: save the caller's $0B
+        inc e
+        dec e
+        jr z,acquire_save_0b
+        ld a,e                  ; joystick: RELEASE keeps the port in UART mode,
+acquire_save_0b:                ; idle high, without MD pad scans on pin 7
 reloc_save_nextreg_0b:
         ld (saved_nextreg_0b),a
         ld a,e
@@ -306,7 +313,9 @@ reloc_drain_leave:
 
 ; B=5 RELEASE
 ; Restores readable configuration: UART selection and frame, NextReg $A0, $A2,
-; $0B and selector. No prescaler bit is written, so the Pi divisor stays a
+; $0B and selector. With a joystick output $0B is "restored" to that output:
+; outside UART mode pin 7 carries Mega Drive pad scans (4 x 9 us low every
+; ~2.3 ms, measured 2026-10-15) that an external synth could take for MIDI. No prescaler bit is written, so the Pi divisor stays a
 ; coherent 31250 and the ESP divisor is never touched (docs/driver-api.md).
 release:
 reloc_release_check:

@@ -66,7 +66,12 @@ def main():
             check(carry == 0 and hw.nr[0x0b] == nr0b, f"{tag}: SET_OUTPUT while acquired")
             carry, *_ = call(5)
             check(carry == 0, f"{tag}: RELEASE failed")
-            check(hw.nr[0x0b] == before_0b and hw.nr[0xa2] == before_a2 and hw.nr[0xa0] == 0x05,
+            # Joystick output: $0B stays in UART mode after RELEASE, so pin 7 idles
+            # high instead of carrying Mega Drive pad scans (2026-10-15).
+            want_0b = before_0b if choice == 0 else nr0b
+            # header: the Pi's audio stays in after RELEASE (#107)
+            want_a2_after = 0xD2 if choice == 0 else before_a2
+            check(hw.nr[0x0b] == want_0b and hw.nr[0xa2] == want_a2_after and hw.nr[0xa0] == 0x05,
                   f"{tag}: not restored ($0B={hw.nr[0x0b]:02x} $A2={hw.nr[0xa2]:02x} $A0={hw.nr[0xa0]:02x})")
             check(hw.nr_sel == 0x7f, f"{tag}: NextReg selector not restored")
             for bad in (3, 0x81, 0xff):

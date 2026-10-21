@@ -488,8 +488,9 @@ read_raster_line:
         ld l,e
         ret
 
-; Select 15 or 16 physical lines for the next exact 1 ms slice.
+; Select base or base+1 physical lines for the next exact 1 ms slice.
 advance_frame_quantum:
+        ld a,(slice_base)
         ld hl,(slice_phase)
         ld de,(slice_remainder)
         add hl,de
@@ -497,18 +498,22 @@ advance_frame_quantum:
         or a
         sbc hl,de
         jp c,.short_slice
-        ld (slice_phase),hl
-        ld a,16
-        ld (slice_lines),a
-        ret
+        inc a
+        jp .slice_done
 .short_slice:
         add hl,de
+.slice_done:
         ld (slice_phase),hl
-        ld a,15
         ld (slice_lines),a
         ret
 
+; Once SPACE has cancelled, no longer: the cleanup after a cancel waits for
+; the driver with SPACE often still held, and must send the whole sweep of
+; Note Offs (it stopped after the driver's buffer, at channel 7).
 check_cancel:
+        ld a,(cancelled)
+        or a
+        ret nz                  ; OR clears carry
         ld bc,$7ffe
         in a,(c)
         bit 0,a                 ; SPACE

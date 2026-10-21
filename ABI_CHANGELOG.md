@@ -8,6 +8,26 @@ La ABI se identifica por `DE` en `QUERY` (`MT32_ABI_VERSION`, mayor.menor) y por
 las capacidades de `HL`. Contrato completo: [docs/driver-api.md](docs/driver-api.md).
 Hasta M6 los números pueden cambiar y el ID `$2D` sigue siendo experimental.
 
+## 0.3, revisión del 2026-10-16 (#107)
+
+- Con salida al conector, `RELEASE` deja NextReg `$A2=$D2` (I²S de la Pi
+  activado) en vez de restaurarlo. Antes, el sonido de la Pi sólo entraba en
+  el Next mientras un programa tenía el driver adquirido: un teclado MIDI
+  conectado a la Pi llegaba al sinte (comprobado en el Next con un Fatar por
+  un UM-ONE) pero no se oía. Con salida por joystick no cambia nada.
+  Comparación en simulador: 5120 escenarios, 0 diferencias salvo `$A2` y el
+  valor interno que `RELEASE` deja en `L`. Sin cambio de número.
+
+## 0.3, revisión del 2026-10-15
+
+- Con salida por joystick, `RELEASE` deja NextReg `$0B` en modo UART en vez
+  de restaurarlo: fuera de ese modo la patilla 7 lleva la interrogación del
+  mando Mega Drive (ráfagas de pulsos de 9 µs medidas en el Next), que un
+  sintetizador externo podría tomar por MIDI. Con salida al conector no
+  cambia nada (comparación en simulador: 5120 escenarios, 0 diferencias salvo
+  el valor interno que `RELEASE` deja en `L`). Sin cambio de número: sólo
+  afecta a la salida por joystick, que todavía no tiene cable a la venta.
+
 ## 0.3, 2026-10-12 (#64)
 
 - Nueva función `SET_OUTPUT=7`: `E=0` conector del Accelerator (Golem), `1`

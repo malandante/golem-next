@@ -247,7 +247,7 @@ check_hardware_state:
         inc b
         in a,(c)
         ld d,a
-        ld a,(saved_a2)
+        ld a,$d2                ; header output: RELEASE keeps the Pi's audio (#107)
         cp d
         jp nz,.bad
         dec b

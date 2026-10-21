@@ -62,7 +62,25 @@ Pi-side pins (Pi 40-pin numbering):
 *Joystick port:* `.golem output left` or `right` sends MIDI out of pin 7 of
 that port, for an external MIDI synth without a Pi. The signal is 3.3 V and
 the cable and its diagram are not ready: do not wire a MIDI DIN cable to the
-joystick port yourself.
+joystick port yourself. `.golem output left` sets the port up at once, at
+rest, and it stays so until `.golem output golem` or power-off: while MIDI goes
+out of a joystick port, that port cannot be used for a joystick (use the other
+one). If the MIDI adapter stays plugged in, put `.golem output left` in the
+autoexec: without it, from power-on the Next uses that pin to read Mega Drive
+pads and the synth gets short pulses that some synths could take for data.
+
+*Where you hear it:* the Golem's sound reaches the Next in digital form and the
+Next mixes it with its own (AY, beeper…). It comes out of both its outputs:
+
+- **HDMI (recommended):** the mix goes digitally to the TV or amplifier, which
+  converts it well. It sounds clean.
+- **The Next's minijack:** the Next itself converts to analogue with a very
+  simple converter. Quiet sounds (a note fading out, reverb) crackle, and the
+  crackle changes with the note. It is the Next, not the Golem: the original
+  mt32-pi firmware does the same.
+- **When playing a keyboard,** the TV usually delays the sound (50 to 150 ms)
+  to keep it in sync with the picture. Turn on the TV's **game mode** for the
+  Next's input.
 
 ## 3. Preparing the Pi
 
@@ -99,8 +117,9 @@ joystick port yourself.
 
 ## 4. Installing on the Next
 
-1. Copy `GOLEM.DRV` to `c:/nextzxos/` and the commands `GOLEM`, `MT32`, `GM` and
-   `GSQ` to `c:/dot/`.
+1. Copy `GOLEM.DRV` to `c:/nextzxos/`, the commands `GOLEM`, `MT32`, `GM`,
+   `GSQ` and `MIDIMON` to `c:/dot/`, and the help `GOLEM.GDE` (package `docs/guides` folder)
+   to `c:/docs/guides/`. `.guide golem` then shows it on the Next.
 2. Install the driver:
 
    ```
@@ -130,21 +149,62 @@ and puts it back as it was afterwards. It uses the experimental driver ID
 | --- | --- |
 | `.golem play file.mid` | Plays a MIDI file (SMF 0 or 1, up to 24 tracks and 1 MB). SPACE cancels. |
 | `.golem note <note> <vel> <sec> [channel]` | Plays a test note: note 0–127, velocity 1–127, 1–60 seconds, channel 1–16 (1 if omitted). With the MT-32 engine use channels 2–10: channel 1 is silent. |
-| `.golem status` | Checks the driver and asks the Golem for its engine, ROM set and SoundFont, e.g. "Golem: engine MT-32; ROM new; SoundFont 0". Without an answer within 0.2 s it says "no answer". "RX errors" means bytes were received with errors. |
-| `.golem engine mt32` / `fluidsynth` | Switches the Pi's engine: MT-32 (Munt) or General MIDI (FluidSynth). |
+| `.golem status` | Checks the driver and asks the Golem for its engine, ROM set and SoundFont, e.g. "Golem: engine MT32; ROM new; SoundFont 0"; with the OPL3 engine also its bank ("engine OPL3; bank 72; …"). Without an answer within 0.2 s it says "no answer". "RX errors" means bytes were received with errors. |
+| `.golem engine mt32` / `fluidsynth` / `opl3` | Switches the Pi's engine: MT-32 (Munt), General MIDI (FluidSynth) or General MIDI with OPL3 FM synthesis, the sound of a Sound Blaster 16 (libADLMIDI; firmware golem-1.2.0). |
 | `.golem soundfont <0-127>` | Selects the FluidSynth SoundFont by number. |
+| `.golem bank <0-127>` | Instrument bank of the OPL3 engine (72, DMXOPL3, at start-up). 0–78 are built in; some to try: 0 The Fat Man (AIL), 58 and 59 The Fat Man for Windows 9x (2 and 4 operators), 72 DMXOPL3. Your own banks: WOPL files (made or converted with OPL3 Bank Editor) in the `opl3` folder of the Pi's SD card, numbered from 79 in alphabetical order. Changing the bank stops the notes and resets the instruments. Firmware golem-1.2.0. |
 | `.golem rom old` / `new` / `cm32l` | Selects the ROMs: old MT-32, new MT-32 or CM-32L. |
 | `.golem output golem` / `left` / `right` | Chooses where MIDI goes: the Golem (Accelerator header, the default) or pin 7 of the left or right joystick port, for an external synth. Without a word it reports the current one. |
+| `.golem usb off` / `on` / `bridge` | Forwarding to USB MIDI devices attached to the Pi (a USB-DIN interface, another synth). `on`: the Golem plays and so does the USB device; `bridge`: only USB, the Golem stays silent; `off`: only the Golem. Without a word it reports the mode and how many USB MIDI devices are attached. Needs firmware golem-1.1.0 or later; an older one gives "firmware too old". |
+| `.golem set volume <0-100>` | Master volume of both engines (100 at start-up); the same one a Pi HAT's buttons or encoder change. |
+| `.golem set fx on` / `off` | FluidSynth reverb and chorus on every channel. `off` gives a dry sound for playing a keyboard. |
+| `.golem set channels std` / `alt` | MT-32 channels: `std` parts on 2–10, as a real MT-32; `alt` 1–8 with rhythm on 10, for keyboards fixed on channel 1. |
+| `.golem set thru on` / `off` | A USB keyboard on the Pi also plays the USB MIDI devices (see `usb`). |
+| `.golem set keys on` / `off` | A USB keyboard on the Pi also sends what is played to the Next, for programs that read MIDI (the Golem plays it as well). |
+| `.golem set loud on` / `off` | Makes the Golem louder without distortion (a limiter holds the peaks). Through HDMI the Golem can only be half as loud as the Next's PCM sound; this evens a game's music and effects out. Very quiet passages come up a little too. Firmware golem-1.2.0. |
+| `.golem save` / `save clear` | Keeps the Golem's current settings (engine, ROM set, SoundFont, `set` and `usb`) for its next start, in `golem.cfg` next to `mt32-pi.cfg` on the Pi's SD card, which it reads after `mt32-pi.cfg`. `clear` deletes that file. |
+| `.golem reset` | Returns the synth to its factory state: sends the MT-32 reset and GM System On. Clears what earlier songs' SysEx loaded (instruments, rhythm, effects). |
 
-- `.mt32` and `.gm` take the same orders. Before `play` and `note` they ask
-  the Pi for the MT-32 or the FluidSynth engine and wait until it is ready; if
+- `.mt32`, `.gm` and `.opl3` take the same orders. Before `play` and `note`
+  they ask the Pi for the MT-32, the FluidSynth or the OPL3 engine and wait until it is ready; if
   it already is, nothing changes. If nothing answers within 0.2 seconds (an
   external MIDI synth, for example), they play anyway. `.golem` leaves the
   engine as it is. For example, `.gm play song.mid` for a General MIDI file
   and `.mt32 play game.mid` for an MT-32 one.
+- `play` resets the synth before each song, like `.golem reset`, so the
+  previous song's SysEx does not carry over (a song that needs its own
+  instruments sends them itself). `note` does not reset.
 - Before each song, `play` cleans the synthesiser: releases the sustain
   pedal, stops the notes and sets every channel's volume to 100. When the song
   ends or is cancelled it stops all notes again.
+- A MIDI keyboard on the Pi's USB (directly or through a USB-MIDI
+  interface) plays the Golem's synth alongside the Next. It is heard from the
+  first Golem command that uses the driver (`play`, `note`, `output`); to
+  hear it from power-on, put `.golem output golem` in the autoexec. Both share the 16
+  channels: if the keyboard uses a channel the song also uses they mix, and
+  the song's cleanup at the end also stops the keyboard's notes. With the
+  FluidSynth engine (General MIDI) set the keyboard to channel 16, the one GM
+  songs use least; 10 is percussion. With the MT-32 engine only channels
+  2–10 sound (1 and 11–16 are silent) and an MT-32 song usually uses all of
+  them: play on one that song does not use, or with the Next stopped.
+- Many simple keyboards cannot change channel and always play on channel
+  **1**. FluidSynth plays it; the MT-32 does not. To play it with the MT-32:
+  `.golem set channels alt` (part 1 moves to channel 1), and `std` again for
+  MT-32 games and songs, which expect channel 2.
+- For a dry piano when playing a keyboard, without reverb or chorus
+  (FluidSynth): `.golem set fx off`; `on` brings them back. If an instrument
+  still has chorus, it comes from the SoundFont itself: `chorus = off` in
+  `mt32-pi.cfg`. For other programs and players there are also `DRY.MID` and
+  `EFFECTS.MID` (package `midi` folder), but their effect lasts only until the
+  next `play`.
+- The `set` settings survive `play`, `reset` and the reset SysEx songs send,
+  and last until the Pi is switched off (or longer with `.golem save`). At start-up the volume is 100 and the
+  rest come from `mt32-pi.cfg` (`reverb`/`chorus`, `midi_channels`,
+  `usb_in_thru`). A song can still change the MT-32 volume itself. Without a
+  value, `set` only reports: `.golem set volume` → "Golem: volume 80". It
+  needs firmware golem-1.1.0 or later.
+- `.golem` alone shows a one-line summary of the commands; the full help is
+  `.guide golem`.
 - `engine`, `soundfont` and `rom` wait for the Pi to confirm the change, for
   up to about 30 seconds, because loading a SoundFont takes time. SPACE ends
   the wait, but the Pi may still apply the change.
@@ -155,11 +215,11 @@ and puts it back as it was afterwards. It uses the experimental driver ID
   does not serve the port and could lose data.
 - `output` applies to everything that uses the driver (`.golem`, `.gsq` and
   games) until the driver is uninstalled or the Next restarts; to keep it, put
-  it in the autoexec after `.install`. While music plays, the chosen joystick
-  port does not work as a joystick (the other one does). With a joystick
+  it in the autoexec after `.install`. While the output is a joystick port, that
+  port does not work as a joystick (the other one does), music or not. With a joystick
   output, `.mt32` and `.gm` do not ask the Golem and play straight away.
 - Errors are returned to BASIC as normal error reports (for example
-  "Golem: GOLEM.DRV missing or incompatible"), so they can
+  "Golem: GOLEM.DRV missing or incompat."), so they can
   be handled with `ON ERROR`.
 
 ### `.gsq`
@@ -170,6 +230,18 @@ and puts it back as it was afterwards. It uses the experimental driver ID
 
 Plays a GSEQ file. **P** pauses and resumes; **SPACE** stops. Pausing really
 silences the MT-32, and resuming plays again the notes that were sounding.
+
+### `.midimon`
+
+```
+.midimon
+```
+
+Shows every MIDI message that reaches the Next, in hexadecimal, one per line
+(`90 3C 64` is a note on), until SPACE is pressed. To see a USB keyboard on
+the Golem, first `.golem set keys on`; for a DIN keyboard on the joystick
+adapter's MIDI IN, `.golem output left` (or `right`). The Golem's own replies
+are not shown. Useful to check a keyboard, its channel and its controllers.
 
 ## 6. Converting music to GSEQ
 
@@ -201,9 +273,13 @@ ZX Basic or assembler is in the
 
 | Symptom | What to check |
 | --- | --- |
-| "Golem: GOLEM.DRV missing or incompatible" | The driver is not installed (`.install`, section 4). |
+| Crackle on note tails or reverb, only from the Next's minijack | It is the Next's analogue converter. Listen through HDMI. |
+| When playing a keyboard, the sound comes late through the TV | TV delay: turn on its game mode for the Next's input. |
+| The keyboard does not sound with the MT-32 but does with FluidSynth | The keyboard plays on channel 1, which the MT-32 does not use: `.golem set channels alt` (section 5). |
+| "Golem: GOLEM.DRV missing or incompat." | The driver is not installed (`.install`, section 4). |
 | No sound at all | `output_device = i2s` in `mt32-pi.cfg`; the Pi's power supply (a blinking red LED means it is too weak); cable and shared ground. |
 | Sound, but not MT-32 instruments, or SysEx has no effect | The ROMs did not load and the Pi is on FluidSynth: check they are complete and only one control ROM per variant. Try `.golem engine mt32`, or play with `.mt32 play`. |
+| A song sounds with odd instruments after another one, but fine on its own | The previous song loaded SysEx (its own instruments) and they are still in the synth. `play` already resets the synth; when playing from another program, run `.golem reset` first. |
 | A PC game's music takes long to start | Many Sierra and other soundtracks start with several seconds of SysEx and silence. Loading the file itself takes a couple of seconds. |
 | In other programs, pausing leaves notes hanging | The 1987 MT-32 ignores "All Sound Off" (CC120). `.gsq` and the GSEQ library pause by lowering the volume and releasing the notes. |
 | After switching the Next off mid-note, that note sounds again when the next music loads | The Pi has its own power and keeps that sound; no MIDI message clears it. Stop programs before switching off, or restart the Pi. |

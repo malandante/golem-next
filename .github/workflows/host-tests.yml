@@ -39,5 +39,23 @@ jobs:
         run: |
           git clone --depth 1 https://github.com/skoolkid/skoolkit.git /tmp/skoolkit
           python3 tools/ci/test_driver_output.py --sjasmplus /tmp/sjasmplus/sjasmplus --skoolkit /tmp/skoolkit
+      - name: .golem note lasts real seconds with 48K and +3 timing, in every video timing (#92)
+        run: python3 tools/ci/test_note_duration.py --sjasmplus /tmp/sjasmplus/sjasmplus --skoolkit /tmp/skoolkit --seconds 2
+      - name: .golem usb and reset parse and send the right bytes (#85, #104)
+        run: python3 tools/ci/test_golem_usb.py --sjasmplus /tmp/sjasmplus/sjasmplus --skoolkit /tmp/skoolkit
+      - name: after SPACE cancels, the cleanup sweep reaches all 16 channels
+        run: python3 tools/ci/test_golem_cancel.py --sjasmplus /tmp/sjasmplus/sjasmplus --skoolkit /tmp/skoolkit
+      - name: .golem set parses, sends SET_PARAM and prints the reply; one-line usage
+        run: python3 tools/ci/test_golem_set.py --sjasmplus /tmp/sjasmplus/sjasmplus --skoolkit /tmp/skoolkit
+      - name: .gsq keeps real milliseconds in every video timing (HDMI, VGA 0-6)
+        run: python3 tools/ci/test_gsq_clock.py --sjasmplus /tmp/sjasmplus/sjasmplus --skoolkit /tmp/skoolkit
+      - name: MIDI input library gives whole messages and drops Golem replies
+        run: python3 tools/ci/test_midiin.py --sjasmplus /tmp/sjasmplus/sjasmplus --skoolkit /tmp/skoolkit
+      - name: examples/midimon.bas builds with ZX Basic and prints the messages (binding + library)
+        run: |
+          git clone --depth 1 --branch v1.18.7 https://github.com/boriel-basic/zxbasic.git /tmp/zxbasic
+          python3 tools/ci/test_midimon.py --zxbc /tmp/zxbasic/zxbc.py --skoolkit /tmp/skoolkit
+      - name: .MIDIMON shows the messages, frees its bank and restores the machine
+        run: python3 tools/ci/test_midimon_dot.py --sjasmplus /tmp/sjasmplus/sjasmplus --skoolkit /tmp/skoolkit
       - name: GSEQ library banks assemble and fit in 8 KB
         run: python3 tools/ci/check_gseq_banks.py --sjasmplus /tmp/sjasmplus/sjasmplus

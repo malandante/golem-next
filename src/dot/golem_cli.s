@@ -1,8 +1,9 @@
-; Golem foreground command: .GOLEM and its aliases .MT32 and .GM.
-; Included by src/dot/golem.s, mt32.s and gm.s, which set CLI_ENGINE:
+; Golem foreground command: .GOLEM and its aliases .MT32, .GM and .OPL3.
+; Included by src/dot/golem.s, mt32.s, gm.s and opl3.s, which set CLI_ENGINE:
 ;   0  .GOLEM  leaves the synth engine as it is
 ;   1  .MT32   play/note first ask a Golem for the MT-32 engine
 ;   2  .GM     play/note first ask a Golem for FluidSynth (General MIDI)
+;   3  .OPL3   play/note first ask a Golem for OPL3 FM (General MIDI)
 ; Without a Golem answer the aliases play anyway (an external synth, #76).
 ;
 ; The resident driver remains transport-only.  This command owns the SMF
@@ -26,6 +27,7 @@ NXR_MMU4        equ $54
 NXR_MMU7        equ $57
 NXR_PERIPHERAL1 equ $05
 NXR_TURBO       equ $07
+NXR_VIDEO_TIMING equ $11
 NXR_RASTER_MSB  equ $1e
 NXR_RASTER_LSB  equ $1f
 
@@ -48,6 +50,11 @@ CMD_ENGINE      equ 3
 CMD_SOUNDFONT   equ 4
 CMD_ROMSET      equ 5
 CMD_OUTPUT      equ 6
+CMD_USB         equ 7
+CMD_RESET       equ 8
+CMD_SET         equ 9
+CMD_SAVE        equ 10
+PFX             equ 1       ; print_z: new line and "Golem: " (msg_prefix)
 
 ST_CURSOR       equ 0           ; 24-bit file offsets (#14)
 ST_END          equ 3
@@ -119,6 +126,14 @@ start:
         jp z,command_golem_control
         cp CMD_OUTPUT
         jp z,command_output
+        cp CMD_USB
+        jp z,command_golem_control
+        cp CMD_SET
+        jp z,command_golem_control
+        cp CMD_SAVE
+        jp z,command_golem_control
+        cp CMD_RESET
+        jp z,command_reset
 
         call turbo_on
         call save_mmus
@@ -129,17 +144,14 @@ start:
         call parse_smf
         jp c,error_midi
 
-        ld c,MT32_DRIVER_ID
-        ld b,MT32_FN_ACQUIRE
-        rst $08
-        db NEXTZXOS_M_DRVAPI
-        jp c,error_driver
-        ld a,1
-        ld (driver_acquired),a
+        call acquire_driver
         ld (cleanup_midi),a
         call select_engine
         jp c,engine_failed
         call clean_synth
+        jp c,play_failed
+        call reset_synth        ; factory setup first, not the previous
+                                ; file's SysEx (#104)
         jp c,play_failed
         ld hl,msg_playing
         call print_z
@@ -172,10 +184,51 @@ command_output:
         jp c,error_driver       ; A=0: driver older than ABI 0.3
         call query_driver
         jp c,error_driver
+        call apply_output
 .show:
         call print_output
         ld hl,msg_crlf
         jp exit_success
+
+; Applies the output now instead of at the next play. Outside UART mode
+; pin 7 of a joystick port carries Mega Drive pad scans (4 x 9 us low every
+; ~2.3 ms, measured 2026-10-15) that an external synth could take for MIDI.
+; left/right: ACQUIRE writes NextReg $0B and, with a joystick output, RELEASE
+; keeps it, so the port stays in UART mode with pin 7 idle high. golem: undo
+; that UART mode ($A1/$B1) so the joystick works again; then ACQUIRE/RELEASE
+; leave the Pi's audio enabled ($A2), so a keyboard on the Pi sounds (#107).
+apply_output:
+        ld a,(driver_caps+1)
+        or a
+        call z,joystick_off
+        ld c,MT32_DRIVER_ID
+        ld b,MT32_FN_ACQUIRE
+        rst $08
+        db NEXTZXOS_M_DRVAPI
+        ret c                   ; session in use: applies at its next ACQUIRE
+        ld c,MT32_DRIVER_ID
+        ld b,MT32_FN_RELEASE
+        rst $08
+        db NEXTZXOS_M_DRVAPI
+        ret
+joystick_off:
+        ld bc,NEXTREG_SELECT
+        in a,(c)
+        ld e,a
+        ld a,$0b
+        out (c),a
+        inc b
+        in a,(c)
+        and $ef                 ; $A1 left or $B1 right
+        cp $a1
+        jr nz,.keep
+        xor a
+        out (c),a
+.keep:
+        dec b
+        ld a,e
+        out (c),a
+        ret
 
 ; Prints "; output golem|left|right" from QUERY H (driver_caps+1).
 print_output:
@@ -192,14 +245,27 @@ print_output:
 .print:
         jp print_z
 
-command_note:
+; ACQUIRE, or the driver error report. Returns A=1.
+acquire_driver:
         ld c,MT32_DRIVER_ID
         ld b,MT32_FN_ACQUIRE
         rst $08
         db NEXTZXOS_M_DRVAPI
-        jp c,error_driver
+        jp c,error_driver       ; exit_common restores SP
         ld a,1
         ld (driver_acquired),a
+        ret
+
+; .golem reset (#104): MT-32 "all parameters reset" and GM System On.
+command_reset:
+        call acquire_driver
+        call reset_synth
+        jp c,error_transport
+        ld hl,msg_golem_done
+        jp exit_success
+
+command_note:
+        call acquire_driver
         ld (cleanup_midi),a
         call select_engine
         jp c,engine_failed
@@ -212,13 +278,7 @@ command_golem_control:
         ld a,(driver_caps)      ; Golem replies need READ (ABI 0.2, #5)
         and MT32_CAP_RX_NONBLOCKING
         jp z,error_no_rx
-        ld c,MT32_DRIVER_ID
-        ld b,MT32_FN_ACQUIRE
-        rst $08
-        db NEXTZXOS_M_DRVAPI
-        jp c,error_driver
-        ld a,1
-        ld (driver_acquired),a
+        call acquire_driver
         ld a,r                   ; vary transaction across separate CLI loads
         and $7f
         ld (golem_transaction),a
@@ -233,11 +293,89 @@ command_golem_control:
         ld a,(golem_remote_error)
         or a
         jp z,error_transport
+        ld hl,err_golem_old
+        cp GOLEM_ERROR_COMMAND  ; firmware without this command
+        jp z,exit_error
         ld hl,err_golem_rejected
         jp exit_error
 .confirmed:
+        ld a,(command_mode)
+        cp CMD_SET
+        jr z,.show_set
+        cp CMD_USB
         ld hl,msg_golem_done
+        jp nz,exit_success
+
+; .golem usb (#85): READY carries the mode and the USB MIDI device count,
+; kept in golem_status by validate_golem_frame.
+        ld hl,msg_usb
+        call print_z
+        ld a,(golem_status)
+        ld hl,text_off
+        or a
+        jr z,.usb_mode
+        ld hl,text_on
+        dec a
+        jr z,.usb_mode
+        ld hl,text_bridge
+.usb_mode:
+        call print_z
+        ld hl,msg_usb_devices
+        call print_z
+        ld a,(golem_status+1)
+        ld l,a
+        ld h,0
+        call print_dec
+        ld hl,msg_crlf
         jp exit_success
+
+; .golem set: "Golem: <parameter> <value>" from READY (golem_status+1).
+.show_set:
+        ld hl,msg_prefix
+        call print_z
+        ld a,(golem_value)      ; parameter
+        push af
+        ld hl,text_volume
+        call skip_z
+        call print_z
+        ld a,' '
+        rst $10
+        pop af
+        ld hl,text_off          ; off, on
+        cp GOLEM_PARAM_CHANNELS
+        jr nz,.set_value
+        ld hl,text_std          ; std, alt
+.set_value:
+        cp GOLEM_PARAM_BANK
+        jr z,.set_bank
+        or a                    ; volume: a number
+.set_bank:                      ; Z: volume or bank, a number
+        ld a,(golem_status+1)
+        jr z,.set_number
+        call skip_z
+        call print_z
+        jr .set_end
+.set_number:
+        ld l,a
+        ld h,0
+        call print_dec
+.set_end:
+        ld hl,msg_crlf
+        jp exit_success
+
+; HL past A zero-terminated strings. Uses A, C.
+skip_z:
+        or a
+        ret z
+        ld c,a
+.next:
+        ld a,(hl)
+        inc hl
+        or a
+        jr nz,.next
+        dec c
+        jr nz,.next
+        ret
 
 ; .MT32/.GM engine request: rejected, cancelled, or no READY in time.
 engine_failed:

@@ -52,6 +52,7 @@ slice_period:           dw 0
 slice_remainder:        dw 0
 slice_phase:            dw 0
 slice_lines:            db 0
+slice_base:             db 0    ; whole lines per ms
 raster_lines:           dw 0
 measure_max:            dw 0
 measure_wraps:          db 0
@@ -75,6 +76,7 @@ status_uart:            db 0    ; raw $133B from STATUS (#17)
 cleanup_midi:           db 0
 golem_command:          db 0
 golem_value:            db 0
+golem_value2:           db 0    ; SET_PARAM value
 golem_transaction:      db 0
 golem_timeout:          dw 0
 golem_accepted:         db 0
@@ -91,29 +93,24 @@ note_velocity:          db 0
 note_seconds:           db 0
 note_channel:           db 0
 note_seconds_left:      db 0
-note_frames_per_second: db 0
+; The file name is only needed to open the file (load_file), before
+; parse_smf fills track_states, so both share the same 288 bytes.
+filename:
 track_states:           ds MAX_TRACKS*ST_SIZE
-filename:               ds 256
 
 msg_usage:
-        db $0d,"Usage: .golem play <file.mid>",$0d
-        db "       .golem note <note> <vel> <sec> [chan]",$0d
-        db "       .golem status",$0d
-        db "       .golem engine mt32|fluidsynth",$0d
-        db "       .golem soundfont <0-127>",$0d
-        db "       .golem rom old|new|cm32l",$0d
-        db "       .golem output [golem|left|right]",$0d
-        db "       .mt32/.gm: the same; play and note",$0d
-        db "       first set the MT-32/GM engine",$0d,0
+        db $0d,".golem play|note|status|engine|"
+        db "rom|soundfont|bank|output|usb|set|save|reset",$0d
+        db "Help: .guide golem",$0d,0
 ; Error reports: the last character carries bit 7 (NextZXOS convention).
 err_usage:
         db "Golem: invalid usag",'e'+$80
 err_driver:
-        db "Golem: GOLEM.DRV missing or incompatibl",'e'+$80
+        db "Golem: GOLEM.DRV missing or incompat",'.'+$80
 err_no_rx:
         db "Golem: GOLEM.DRV has no RX (ABI 0.2",')'+$80
 err_memory:
-        db "Golem: out of memory bank",'s'+$80
+        db "Golem: out of mem bank",'s'+$80
 err_not_found:
         db "Golem: cannot open fil",'e'+$80
 err_too_big:
@@ -126,26 +123,31 @@ err_bad_event:
         db "Golem: invalid SMF even",'t'+$80
 err_transport:
         db "Golem: transport error or timeou",'t'+$80
+; PFX in a message prints this: a new line and "Golem: " (print_z)
+msg_prefix:
+        db $0d,"Golem: ",0
 msg_loading:
-        db $0d,"Golem: loading",0
+        db PFX,"loading",0
 msg_playing:
-        db $0d,"Golem: playing (SPACE stops)",0
+        db PFX,"playing (SPACE stops)",0
 msg_cancelled:
-        db $0d,"Golem: playback cancelled",$0d,0
+        db PFX,"playback cancelled",$0d,0
 msg_done:
-        db $0d,"Golem: playback finished",$0d,0
+        db PFX,"playback finished",$0d,0
 msg_note_done:
-        db $0d,"Golem: note finished",$0d,0
+        db PFX,"note finished",$0d,0
 msg_golem_done:
-        db $0d,"Golem: command accepted and applied",$0d,0
+        db PFX,"command accepted and applied",$0d,0
 msg_golem_cancelled:
-        db $0d,"Golem: wait cancelled; the command may still apply",$0d,0
+        db PFX,"wait cancelled; command may still apply",$0d,0
 err_golem_rejected:
-        db "Golem: command rejected by the Gole",'m'+$80
+        db "Golem: command rejected by Gole",'m'+$80
+err_golem_old:
+        db "Golem: firmware too old for comman",'d'+$80
 msg_status_free:
-        db $0d,"Golem: driver OK; session free; ",0
+        db PFX,"driver OK; session free; ",0
 msg_status_busy:
-        db $0d,"Golem: driver OK; session in use; ",0
+        db PFX,"driver OK; session in use; ",0
 msg_status_full:
         db "TX full",0
 msg_status_empty:
@@ -155,19 +157,21 @@ msg_status_active:
 msg_status_rx_errors:
         db "; RX errors",0
 msg_golem_no_rx:
-        db $0d,"Golem: not queried (driver has no RX)",$0d,0
+        db PFX,"not queried (driver has no RX)",$0d,0
 msg_golem_busy:
-        db $0d,"Golem: not queried (session in use)",$0d,0
+        db PFX,"not queried (session in use)",$0d,0
 msg_golem_silent:
-        db $0d,"Golem: no answer (off or external synth)",$0d,0
+        db PFX,"no answer (off or external synth)",$0d,0
 msg_golem_query_cancelled:
-        db $0d,"Golem: query cancelled",$0d,0
+        db PFX,"query cancelled",$0d,0
 msg_gs_engine:
-        db $0d,"Golem: engine ",0
+        db PFX,"engine ",0
 msg_gs_rom:
         db "; ROM ",0
 msg_gs_no_mt32:
-        db "; no MT-32 ROM",0
+        db "; no MT32 ROM",0
+msg_gs_bank:
+        db "; bank ",0
 msg_gs_soundfont:
         db "; SoundFont ",0
 msg_gs_no_soundfont:
@@ -175,9 +179,11 @@ msg_gs_no_soundfont:
 msg_crlf:
         db $0d,0
 text_engine_mt32:
-        db "MT-32",0
+        db "MT32",0
 text_engine_fluidsynth:
-        db "FluidSynth",0
+        db "FS",0
+text_engine_opl3:
+        db "OPL3",0
 text_engine_none:
         db "none",0
 text_unknown:
@@ -199,6 +205,8 @@ kw_om:
         db "om",0
 text_fluidsynth:
         db "fluidsynth",0
+text_opl3:
+        db "opl3",0
 text_old:
         db "old",0
 text_new:
@@ -214,12 +222,53 @@ text_left:
 text_right:
         db "right",0
 msg_output:
-        db $0d,"Golem: output ",0
+        db PFX,"output ",0
 text_output_golem:
-        db "Golem (Accelerator header)",0
+        db "Golem (Accel. header)",0
 text_output_left:
         db "left joystick port, pin 7",0
 text_output_right:
         db "right joystick port, pin 7",0
+kw_sb:
+        db "sb",0
+text_off:
+        db "off",0
+text_on:
+        db "on",0
+text_bridge:
+        db "bridge",0
+kw_eset:
+        db "eset",0
+kw_ve:
+        db "ve",0
+text_clear:
+        db "clear",0
+; .golem set: parameter names in GOLEM_PARAM_* order, then the value words in
+; value order (show_set skips to the one it prints).
+text_volume:
+        db "volume",0
+text_fx:
+        db "fx",0
+text_channels:
+        db "channels",0
+text_thru:
+        db "thru",0
+text_keys:
+        db "keys",0
+text_bank:
+        db "bank",0
+text_loud:
+        db "loud",0
+text_std:
+        db "std",0
+text_alt:
+        db "alt",0
+reset_messages:
+        db $f0,$41,$10,$16,$12,$7f,$00,$00,$00,$01,$f7   ; MT-32: reset all
+        db $f0,$7e,$7f,$09,$01,$f7                      ; GM System On
+msg_usb:
+        db PFX,"USB out ",0
+msg_usb_devices:
+        db "; USB MIDI devices ",0
 
 binary_end:

@@ -19,7 +19,7 @@ función no soportada según la convención oficial.
 | B | Operación | Entrada | Salida |
 |---:|---|---|---|
 | 0 | QUERY | — | `BC="MT"`, `DE=$0003`, `L` capacidades, `H` valor de NextReg `$0B` que escribirá `ACQUIRE` (0: conector del Accelerator) |
-| 1 | ACQUIRE | — | Adquiere en exclusiva, configura UART Pi a 31250, 8N1 según NextReg `$11`, escribe NextReg `$0B` según `SET_OUTPUT` y, sólo con salida al conector, activa la recepción I²S de la Pi (NextReg `$A2=$D2`) |
+| 1 | ACQUIRE | — | Adquiere en exclusiva, configura UART Pi a 31250, 8N1 según NextReg `$11`, escribe NextReg `$0B` según `SET_OUTPUT` y, sólo con salida al conector, activa la recepción I²S de la Pi (NextReg `$A2=$D2`), que `RELEASE` deja activada |
 | 2 | WRITE | `HL` buffer visible, `DE` longitud | `BC` aceptados, `HL` avanzado, `DE` restante |
 | 3 | STATUS | — | `C`: bit 0 adquirido, bit 1 TX llena, bit 2 TX vacía, bit 3 RX con datos. `B`: byte de estado del UART (puerto `$133B`) tal cual; siempre del UART Pi |
 | 4 | DRAIN_STATUS | — | `BC=$FFFF` si FIFO TX vacía; `0` si no |
@@ -42,10 +42,19 @@ siguiente `ACQUIRE`, y dura mientras el driver esté instalado (al instalarlo
 vale 0). Con 1 o 2, `ACQUIRE` escribe NextReg `$0B` = `$A1` o `$B1` (modo E/S
 de joystick, UART en ese puerto, UART de la Pi): Tx sale por la patilla 7 y Rx
 entra por la 9. Con 0 escribe `$0B=0`. Con salida por joystick no toca `$A2`,
-porque el sonido sale del sintetizador externo. `RELEASE` restaura `$0B`
-junto con `$A0` y `$A2`. Puede llamarse adquirido o no; un cambio con la
-sesión abierta vale para la siguiente. Mientras está adquirido con salida por
-joystick, ese puerto no funciona como joystick. Capacidad
+porque el sonido sale del sintetizador externo. `RELEASE` restaura `$A0`;
+`$A2` y `$0B`, sólo con salida por joystick. Con salida al conector deja
+`$A2=$D2`, para que el sonido de la Pi siga entrando entre programas (un
+teclado conectado a la Pi suena aunque nadie use el driver, #107). Con salida por joystick lo deja en
+modo UART: fuera de ese modo la patilla 7 lleva la interrogación del mando
+Mega Drive (ráfagas de 4 pulsos a 0 de 9 µs cada ~2,3 ms, medido el
+2026-10-15), que un sintetizador externo podría tomar por MIDI; en modo UART
+queda en reposo, en alto. Mientras la salida sea por joystick, ese puerto no
+funciona como joystick. `.golem output left|right` aplica el modo al momento
+con un `ACQUIRE` y un `RELEASE`, y `.golem output golem` quita el modo UART
+(`$A1`/`$B1`) de `$0B`. Un programa que vuelva a `SET_OUTPUT 0` por su cuenta
+debe hacer lo mismo. Puede llamarse adquirido o no; un cambio con la sesión
+abierta vale para la siguiente. Capacidad
 `MT32_CAP_OUTPUT_SELECT` (`$0004`).
 
 ## Requisitos del llamador
@@ -82,7 +91,9 @@ joystick, ese puerto no funciona como joystick. Capacidad
   cada función vuelve a seleccionar la Pi y deja la selección como la encontró.
 - **NextRegs.** Mientras está adquirido, el driver ha cambiado `$A0` (UART a la
   Pi), `$0B` (salida por joystick o ninguna) y, con salida al conector, `$A2`
-  (I²S de la Pi). `RELEASE` los restaura, junto con el selector de NextReg.
+  (I²S de la Pi). `RELEASE` los restaura, junto con el selector de NextReg,
+  salvo `$0B` con salida por joystick, que se queda en modo UART, y `$A2`
+  con salida al conector, que se queda en `$D2`.
 
 Cambios de versión: [ABI_CHANGELOG.md](../ABI_CHANGELOG.md).
 
@@ -121,9 +132,9 @@ que `.install` no reemplaza un propietario previo del ID experimental. Los
 marcadores directos F4/F5 pertenecen sólo al arnés CSpect, no al ABI.
 
 `MTSTATE` comprueba que `STATUS` preserva IX/IY y registros alternativos y que
-el ciclo ACQUIRE/RELEASE restaura el selector NextReg, NextReg `$A0` y `$A2`,
+el ciclo ACQUIRE/RELEASE restaura el selector NextReg, NextReg `$A0`,
 MMU 4–7, selección UART y formato de trama, y que `$A2` vale `$D2` mientras el
-driver está adquirido. Su oráculo exacto es `F3 01 F9`, incluido el
+driver está adquirido y después de `RELEASE`. Su oráculo exacto es `F3 01 F9`, incluido el
 marcador posterior a la desinstalación.
 
 `MTDURATION` alinea 32 llamadas `WRITE` al inicio de una línea raster y mide el
@@ -148,12 +159,12 @@ del hardware.
 
 El core permite leer selección UART y formato de trama, pero los 14 bits bajos
 del divisor de baud se escriben por el puerto RX y no son legibles. `RELEASE`
-restaura NextReg `$A0` y `$A2`, selección UART, formato de trama y selector
+restaura NextReg `$A0`, selección UART, formato de trama y selector
 NextReg, pero deja el divisor del UART Pi en 31250. Para que ese 31250 sea
 coherente, `RELEASE` no escribe ningún bit del divisor: ni los 14 bajos ni los 3
-altos del puerto de selección. El divisor del ESP nunca se toca. Al liberar se
-restaura `$A2`, así que la cola de reverberación de la Pi deja de oírse por el
-Next en ese momento. Hasta disponer de arbitraje externo,
+altos del puerto de selección. El divisor del ESP nunca se toca. Con salida al conector, `$A2` se
+queda en `$D2` al liberar: el sonido de la Pi (la cola de reverberación, un
+teclado conectado a ella) sigue oyéndose por el Next. Hasta disponer de arbitraje externo,
 ningún cliente debe asumir restauración completa de un baud previo desconocido.
 
 Referencia normativa: [DriverIDs.txt](https://gitlab.com/thesmog358/tbblue/-/blob/master/docs/nextzxos/DriverIDs.txt) del repositorio `tbblue`, el manual

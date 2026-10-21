@@ -21,19 +21,23 @@ send_golem_control:
         ld (IO_BUFFER+7),a
         ld a,(golem_command)
         or a                    ; GOLEM_CMD_GET_STATUS: no payload
-        jp z,.no_payload
+        jr z,.no_payload
         ld a,(golem_value)
         ld (IO_BUFFER+8),a
         ld a,(golem_command)
+        cp GOLEM_CMD_SET_PARAM
+        ld a,(golem_value2)
+        jr z,.second
+        ld a,(golem_command)
         cp GOLEM_CMD_SET_SOUNDFONT
-        jp z,.soundfont
+        jr z,.soundfont
         ld a,$f7
         ld (IO_BUFFER+9),a
         ld hl,IO_BUFFER
         ld de,10
         call write_all
         ret c
-        jp wait_golem_response
+        jr wait_golem_response
 .no_payload:
         ld a,$f7
         ld (IO_BUFFER+8),a
@@ -41,9 +45,10 @@ send_golem_control:
         ld de,9
         call write_all
         ret c
-        jp wait_golem_response
+        jr wait_golem_response
 .soundfont:
         xor a                   ; high seven bits; CLI currently accepts 0..127
+.second:
         ld (IO_BUFFER+9),a
         ld a,$f7
         ld (IO_BUFFER+10),a
@@ -51,9 +56,9 @@ send_golem_control:
         ld de,11
         call write_all
         ret c
-        jp wait_golem_response
+        jr wait_golem_response
 
-; .MT32 and .GM (CLI_ENGINE 1 and 2): before play and note, ask a Golem for
+; .MT32, .GM and .OPL3 (CLI_ENGINE 1-3): before play and note, ask a Golem for
 ; the engine and wait until it is ready (#76). A synth that does not answer
 ; ACCEPTED within GOLEM_ACCEPT_FRAMES, or a driver without RX, is taken for an
 ; external synth and the command plays anyway. Carry: ERROR, cancel or
@@ -70,7 +75,7 @@ select_engine:
         ret z                   ; AND clears carry
         ld a,GOLEM_CMD_SET_SYNTH
         ld (golem_command),a
-        ld a,CLI_ENGINE-1       ; 0 MT-32, 1 FluidSynth
+        ld a,CLI_ENGINE-1       ; 0 MT-32, 1 FluidSynth, 2 OPL3
         ld (golem_value),a
         ld a,r
         and $7f
@@ -102,25 +107,25 @@ wait_golem_response:
         call read_golem_chunk
         ret c
         cp 2
-        jp z,.ready
+        jr z,.ready
         cp 3
-        jp z,.failed
+        jr z,.failed
         call check_cancel       ; SPACE ends the wait (#26)
         ret c
         ld a,(golem_last_count) ; a full read: more bytes may be waiting
         cp MT32_MAX_READ
-        jp z,.poll
+        jr z,.poll
         ei
         halt
         ld a,(golem_accepted)
         or a
-        jp nz,.long_wait
+        jr nz,.long_wait
         ld a,(golem_accept_wait)
         or a
-        jp z,.long_wait
+        jr z,.long_wait
         dec a
         ld (golem_accept_wait),a
-        jp nz,.long_wait
+        jr nz,.long_wait
         inc a
         ld (golem_no_answer),a
         scf
@@ -131,7 +136,7 @@ wait_golem_response:
         ld (golem_timeout),hl
         ld a,h
         or l
-        jp nz,.poll
+        jr nz,.poll
         scf
         ret
 .ready:
@@ -157,7 +162,7 @@ read_golem_chunk:
 .byte_loop:
         ld a,(golem_read_remaining)
         or a
-        jp z,.pending
+        jr z,.pending
         dec a
         ld (golem_read_remaining),a
         ld a,(hl)
@@ -166,23 +171,23 @@ read_golem_chunk:
         call feed_golem_byte
         pop hl
         cp 1
-        jp nz,.not_accepted
+        jr nz,.not_accepted
         ld a,1
         ld (golem_accepted),a
-        jp .byte_loop
+        jr .byte_loop
 .not_accepted:
         cp 2
-        jp nz,.not_ready
+        jr nz,.not_ready
         ld a,(golem_accepted)
         or a
-        jp z,.byte_loop
+        jr z,.byte_loop
         ld a,2
         or a
         ret
 .not_ready:
         cp 3
-        jp z,.event
-        jp .byte_loop
+        jr z,.event
+        jr .byte_loop
 .pending:
         xor a
 .event:
@@ -193,7 +198,7 @@ read_golem_chunk:
 ; discarded, and unrelated transaction/command replies are ignored.
 feed_golem_byte:
         cp $f0
-        jp nz,.continuation
+        jr nz,.continuation
         ld (golem_rx_frame),a
         ld a,1
         ld (golem_rx_length),a
@@ -201,16 +206,16 @@ feed_golem_byte:
         ret
 .continuation:
         cp $f7
-        jp z,.append
+        jr z,.append
         bit 7,a
-        jp nz,.reset
+        jr nz,.reset
 .append:
         ld c,a
         ld a,(golem_rx_length)
         or a
-        jp z,.none
+        jr z,.none
         cp GOLEM_RX_FRAME_MAX
-        jp nc,.reset
+        jr nc,.reset
         ld e,a
         ld d,0
         ld hl,golem_rx_frame
@@ -220,7 +225,7 @@ feed_golem_byte:
         ld (golem_rx_length),a
         ld a,c
         cp $f7
-        jp nz,.none
+        jr nz,.none
         call validate_golem_frame
         push af
         xor a
@@ -239,37 +244,37 @@ feed_golem_byte:
 validate_golem_frame:
         ld a,(golem_rx_length)
         cp 10
-        jp c,.invalid
+        jr c,.invalid
         ld a,(golem_rx_frame+1)
         cp GOLEM_SYSEX_MANUFACTURER
-        jp nz,.invalid
+        jr nz,.invalid
         ld a,(golem_rx_frame+2)
         cp GOLEM_SIGNATURE_0
-        jp nz,.invalid
+        jr nz,.invalid
         ld a,(golem_rx_frame+3)
         cp GOLEM_SIGNATURE_1
-        jp nz,.invalid
+        jr nz,.invalid
         ld a,(golem_rx_frame+4)
         cp GOLEM_SIGNATURE_2
-        jp nz,.invalid
+        jr nz,.invalid
         ld a,(golem_rx_frame+5)
         cp GOLEM_PROTOCOL_VERSION
-        jp nz,.invalid
+        jr nz,.invalid
         ld a,(golem_transaction)
         ld b,a
         ld a,(golem_rx_frame+6)
         cp b
-        jp nz,.invalid
+        jr nz,.invalid
         ld a,(golem_command)
         ld b,a
         ld a,(golem_rx_frame+8)
         cp b
-        jp nz,.invalid
+        jr nz,.invalid
         ld a,(golem_rx_frame+7)
         cp GOLEM_RESPONSE_ACCEPTED
-        jp z,.accepted
+        jr z,.accepted
         cp GOLEM_RESPONSE_READY
-        jp z,.ready
+        jr z,.ready
         cp GOLEM_RESPONSE_ERROR
         jp z,.error
         cp GOLEM_RESPONSE_STATUS
@@ -280,35 +285,69 @@ validate_golem_frame:
 .accepted:
         ld a,(golem_rx_length)
         cp 10
-        jp nz,.invalid
+        jr nz,.invalid
         ld a,1
         ret
 .ready:
         ld a,(golem_command)
         cp GOLEM_CMD_SET_SOUNDFONT
-        jp z,.ready_soundfont
+        jr z,.ready_soundfont
+        cp GOLEM_CMD_SET_USB_OUT
+        jr z,.ready_usb
+        cp GOLEM_CMD_SET_PARAM
+        jr z,.ready_param
         ld a,(golem_rx_length)
         cp 11
-        jp nz,.invalid
+        jr nz,.invalid
         ld a,(golem_value)
         ld b,a
         ld a,(golem_rx_frame+9)
         cp b
-        jp nz,.invalid
+        jr nz,.invalid
+.ready_ok:
         ld a,2
         ret
+; SET_PARAM: READY parameter value; a query accepts any value.
+.ready_param:
+        ld a,(golem_rx_length)
+        cp 12
+        jr nz,.invalid
+        ld hl,(golem_rx_frame+9)
+        ld (golem_status),hl    ; parameter, value
+        ld a,(golem_value)
+        cp l
+        jr nz,.invalid
+        ld a,(golem_value2)
+        cp GOLEM_PARAM_QUERY
+        jr z,.ready_ok
+        cp h
+        jr nz,.invalid
+        jr .ready_ok
+; SET_USB_OUT: READY mode devices. A query accepts any mode.
+.ready_usb:
+        ld a,(golem_rx_length)
+        cp 12
+        jr nz,.invalid
+        ld hl,(golem_rx_frame+9)
+        ld (golem_status),hl    ; mode, device count
+        ld a,(golem_value)
+        cp GOLEM_USB_OUT_QUERY
+        jr z,.ready_ok
+        cp l
+        jr nz,.invalid
+        jr .ready_ok
 .ready_soundfont:
         ld a,(golem_rx_length)
         cp 12
-        jp nz,.invalid
+        jr nz,.invalid
         ld a,(golem_value)
         ld b,a
         ld a,(golem_rx_frame+9)
         cp b
-        jp nz,.invalid
+        jr nz,.invalid
         ld a,(golem_rx_frame+10)
         or a
-        jp nz,.invalid
+        jr nz,.invalid
         ld a,2
         ret
 .error:
@@ -358,7 +397,7 @@ query_golem:
         ld a,GOLEM_ACCEPT_FRAMES
         ld (golem_accept_wait),a
         call send_golem_control
-        jp nc,print_golem_status
+        jr nc,print_golem_status
         ld a,(golem_no_answer)
         or a
         ld hl,msg_golem_silent
@@ -375,7 +414,7 @@ query_golem:
         ld hl,err_transport
         ret
 ; golem_status: capabilities (2), availability (bit 0 MT-32, bit 1
-; FluidSynth), engine (0 MT-32, 1 FluidSynth, $7F none), ROM set (0 old,
+; FluidSynth, bit 2 OPL3), engine (0 MT-32, 1 FluidSynth, 2 OPL3, $7F none), ROM set (0 old,
 ; 1 new, 2 CM-32L, $7F none), SoundFont index (14 bits, $3FFF none).
 print_golem_status:
         ld hl,msg_gs_engine
@@ -383,36 +422,42 @@ print_golem_status:
         ld a,(golem_status+3)
         ld hl,text_engine_mt32
         or a
-        jp z,.engine
+        jr z,.engine
         ld hl,text_engine_fluidsynth
         dec a
-        jp z,.engine
+        jr z,.engine
+        ld hl,text_engine_opl3
+        dec a
+        jr z,.engine
         ld hl,text_engine_none
 .engine:
         call print_z
+        ld a,(golem_status+3)
+        cp GOLEM_SYNTH_OPL3
+        call z,print_opl3_bank
         ld a,(golem_status+2)
         bit 0,a
         ld hl,msg_gs_no_mt32
-        jp z,.rom_done
+        jr z,.rom_done
         ld hl,msg_gs_rom
         call print_z
         ld a,(golem_status+4)
         ld hl,text_old
         or a
-        jp z,.rom_done
+        jr z,.rom_done
         ld hl,text_new
         dec a
-        jp z,.rom_done
+        jr z,.rom_done
         ld hl,text_cm32l
         dec a
-        jp z,.rom_done
+        jr z,.rom_done
         ld hl,text_unknown
 .rom_done:
         call print_z
         ld a,(golem_status+2)
         bit 1,a
         ld hl,msg_gs_no_soundfont
-        jp z,.last
+        jr z,.last
         ld hl,msg_gs_soundfont
         call print_z
         ld a,(golem_status+6)   ; HL = high x 128 + low
@@ -420,17 +465,17 @@ print_golem_status:
         ld a,(golem_status+5)
         ld l,a
         srl h
-        jp nc,.even
+        jr nc,.even
         set 7,l
 .even:
         ld a,h
         cp $3f
-        jp nz,.number
+        jr nz,.number
         ld a,l
         cp $ff
-        jp nz,.number
+        jr nz,.number
         ld hl,text_unknown
-        jp .last
+        jr .last
 .number:
         call print_dec
         ld hl,msg_crlf
@@ -441,6 +486,32 @@ print_golem_status:
         ld hl,msg_crlf
         or a
         ret
+
+; With OPL3 active, "; bank N" from a second exchange, SET_PARAM bank query:
+; STATUS has no room for it in its seven bytes, and old clients expect seven.
+; The reply only overwrites golem_status+0/1. Prints nothing if it fails.
+print_opl3_bank:
+        ld a,GOLEM_CMD_SET_PARAM
+        ld (golem_command),a
+        ld a,GOLEM_PARAM_BANK
+        ld (golem_value),a
+        ld a,GOLEM_PARAM_QUERY
+        ld (golem_value2),a
+        ld hl,golem_transaction
+        ld a,(hl)
+        inc a
+        and $7f
+        ld (hl),a
+        ld a,GOLEM_ACCEPT_FRAMES
+        ld (golem_accept_wait),a
+        call send_golem_control
+        ret c
+        ld hl,msg_gs_bank
+        call print_z
+        ld a,(golem_status+1)
+        ld l,a
+        ld h,0
+        jp print_dec
 
 ; Prints HL (0-65535) in decimal without leading zeros.
 print_dec:
@@ -455,16 +526,16 @@ print_dec:
         call .digit
         ld a,l
         add a,'0'
-        jp .print
+        jr .print
 .digit:
         ld a,'0'-1
 .count:
         inc a
         add hl,bc
-        jp c,.count
+        jr c,.count
         sbc hl,bc               ; carry is clear: undo the last step
         cp '0'
-        jp nz,.print_digit
+        jr nz,.print_digit
         bit 0,e
         ret z
 .print_digit:

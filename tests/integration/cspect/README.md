@@ -181,7 +181,7 @@ Las imágenes específicas se construyen sin modificar la imagen base:
   -OutputImage C:\temp\mt32-duration.img
 ```
 
-`MTSTATE` compara IX/IY, registros alternativos, selector NextReg, `$A0`, `$A2` (y que valga `$D2` durante la adquisición, código de fallo `06`), MMU
+`MTSTATE` compara IX/IY, registros alternativos, selector NextReg, `$A0`, `$A2` (que valga `$D2` durante la adquisición, código de fallo `06`, y después de `RELEASE`), MMU
 4–7, selección UART y formato de trama. La captura exacta `F3 01 F9` demuestra
 además que la desinstalación terminó y el autoexec continuó.
 

@@ -2,7 +2,9 @@
 ; Included by src/dot/golem_cli.s; not assembled on its own. Uses the
 ; constants and labels defined there and in the other modules.
 ;
-; Commands: play, note, status, engine, soundfont, rom and output.
+; Commands: play, note, status, engine (mt32, fluidsynth, opl3), soundfont,
+; rom, bank, output, usb, set,
+; save and reset.
 
 parse_command:
         ld a,h
@@ -12,7 +14,7 @@ parse_command:
         ld a,(hl)
         or $20
         cp 'p'
-        jp z,.play
+        jr z,.play
         cp 'n'
         jp z,.note
         cp 's'
@@ -23,6 +25,10 @@ parse_command:
         jp z,.romset
         cp 'o'
         jp z,.output
+        cp 'u'
+        jp z,.usb
+        cp 'b'
+        jp z,.bank
         jp .bad
 
 .play:
@@ -36,31 +42,31 @@ parse_command:
         call skip_spaces
         ld a,(hl)
         cp '"'
-        jp z,.quoted
+        jr z,.quoted
 
         ld de,filename
         ld b,0
 .plain_loop:
         ld a,(hl)
         or a
-        jp z,.plain_done
+        jr z,.plain_done
         cp $0d
-        jp z,.plain_done
+        jr z,.plain_done
         cp ':'
-        jp z,.plain_done
+        jr z,.plain_done
         cp ' '
-        jp z,.plain_end
+        jr z,.plain_end
         ld (de),a
         inc de
         inc hl
         inc b
         jp z,.bad
-        jp .plain_loop
+        jr .plain_loop
 .plain_done:
-        jp .check_tail
+        jr .check_tail
 .plain_end:
         call skip_spaces
-        jp .check_tail
+        jr .check_tail
 
 .quoted:
         inc hl
@@ -73,13 +79,13 @@ parse_command:
         cp $0d
         jp z,.bad
         cp '"'
-        jp z,.quote_end
+        jr z,.quote_end
         ld (de),a
         inc de
         inc hl
         inc b
         jp z,.bad
-        jp .quote_loop
+        jr .quote_loop
 .quote_end:
         inc hl
         call skip_spaces
@@ -113,7 +119,11 @@ parse_command:
         ld a,(hl)
         or $20
         cp 'o'
-        jp z,.soundfont_after_so
+        jr z,.soundfont_after_so
+        cp 'e'
+        jp z,.set
+        cp 'a'
+        jp z,.save
         cp 't'
         jp nz,.bad
         inc hl
@@ -141,15 +151,9 @@ parse_command:
         cp GOLEM_SOUNDFONT_MAX+1
         jp nc,.bad
         ld (golem_value),a
-        call skip_spaces
-        call at_command_end
-        jp nc,.bad
         ld a,GOLEM_SYSEX_SWITCH_SF
-        ld (golem_command),a
-        ld a,CMD_SOUNDFONT
-        ld (command_mode),a
-        scf
-        ret
+        ld b,CMD_SOUNDFONT
+        jp .control_end
 
 .engine:
         inc hl
@@ -162,38 +166,36 @@ parse_command:
         call skip_spaces
         ld a,(hl)
         or $20
+        ld c,GOLEM_SYNTH_MT32   ; C survives match_word
         cp 'm'
-        jp z,.engine_mt32
+        jr z,.engine_mt32
+        inc c                   ; GOLEM_SYNTH_SOUNDFONT
+        ld de,text_fluidsynth
         cp 'f'
-        jp z,.engine_fluidsynth
+        jr z,.engine_match
+        inc c                   ; GOLEM_SYNTH_OPL3
+        ld de,text_opl3
+        cp 'o'
+        jr z,.engine_match
         jp .bad
 .engine_mt32:
         inc hl
         ld de,kw_t32
+.engine_match:
         call match_word
         jp nz,.bad
-        xor a
+        ld a,c
         ld (golem_value),a
-        jp .engine_tail
-.engine_fluidsynth:
-        ld de,text_fluidsynth
-        call match_word
-        jp nz,.bad
-        ld a,GOLEM_SYNTH_SOUNDFONT
-        ld (golem_value),a
-.engine_tail:
-        call skip_spaces
-        call at_command_end
-        jp nc,.bad
         ld a,GOLEM_SYSEX_SWITCH_SYNTH
-        ld (golem_command),a
-        ld a,CMD_ENGINE
-        ld (command_mode),a
-        scf
-        ret
+        ld b,CMD_ENGINE
+        jp .control_end
 
 .romset:
         inc hl
+        ld a,(hl)
+        or $20
+        cp 'e'
+        jp z,.reset
         ld de,kw_om
         call match_word
         jp nz,.bad
@@ -204,11 +206,11 @@ parse_command:
         ld a,(hl)
         or $20
         cp 'o'
-        jp z,.rom_old
+        jr z,.rom_old
         cp 'n'
-        jp z,.rom_new
+        jr z,.rom_new
         cp 'c'
-        jp z,.rom_cm32l
+        jr z,.rom_cm32l
         jp .bad
 .rom_old:
         xor a
@@ -227,15 +229,9 @@ parse_command:
 .rom_word:
         call match_word
         jp nz,.bad
-        call skip_spaces
-        call at_command_end
-        jp nc,.bad
         ld a,GOLEM_SYSEX_SWITCH_ROM
-        ld (golem_command),a
-        ld a,CMD_ROMSET
-        ld (command_mode),a
-        scf
-        ret
+        ld b,CMD_ROMSET
+        jp .control_end
 .output:
         inc hl
         ld de,kw_utput
@@ -244,23 +240,23 @@ parse_command:
         ld a,$ff                ; no word: report only
         ld (output_choice),a
         call at_command_end
-        jp c,.output_done
+        jr c,.output_done
         ld a,(hl)
         cp ' '
         jp nz,.bad
         call skip_spaces
         call at_command_end
-        jp c,.output_done
+        jr c,.output_done
         ld a,(hl)
         or $20
         ld de,text_golem
         ld c,MT32_OUTPUT_GOLEM
         cp 'g'
-        jp z,.output_word
+        jr z,.output_word
         ld de,text_left
         ld c,MT32_OUTPUT_LEFT
         cp 'l'
-        jp z,.output_word
+        jr z,.output_word
         ld de,text_right
         ld c,MT32_OUTPUT_RIGHT
         cp 'r'
@@ -278,6 +274,196 @@ parse_command:
         ld (command_mode),a
         scf
         ret
+.reset:
+        ld de,kw_eset
+        call match_word
+        jp nz,.bad
+        call skip_spaces
+        call at_command_end
+        jp nc,.bad
+        ld a,CMD_RESET
+        ld (command_mode),a
+        scf
+        ret
+; .golem usb [off|on|bridge] (#85): without a word it only reports.
+.usb:
+        inc hl
+        ld de,kw_sb
+        call match_word
+        jp nz,.bad
+        ld a,GOLEM_USB_OUT_QUERY
+        ld (golem_value),a
+        call at_command_end
+        jr c,.usb_done
+        ld a,(hl)
+        cp ' '
+        jp nz,.bad
+        call skip_spaces
+        call at_command_end
+        jr c,.usb_done
+        ld c,GOLEM_USB_OUT_BRIDGE
+        ld de,text_bridge
+        ld a,(hl)
+        or $20
+        cp 'b'
+        jr z,.usb_word
+        dec c                   ; GOLEM_USB_OUT_ON
+        ld de,text_on
+        inc hl
+        ld a,(hl)
+        dec hl                  ; DEC HL keeps the flags
+        or $20
+        cp 'n'
+        jr z,.usb_word
+        dec c                   ; GOLEM_USB_OUT_OFF
+        ld de,text_off
+.usb_word:
+        call match_word
+        jp nz,.bad
+        ld a,c
+        ld (golem_value),a
+.usb_done:
+        ld a,GOLEM_CMD_SET_USB_OUT
+        ld b,CMD_USB
+        jp .control_end
+; .golem save [clear]: the Pi writes its settings to golem.cfg, or deletes it.
+.save:
+        inc hl
+        ld de,kw_ve
+        call match_word
+        jp nz,.bad
+        ld c,GOLEM_SAVE_WRITE
+        call skip_spaces
+        call at_command_end
+        jr c,.save_done
+        ld de,text_clear
+        call match_word
+        jp nz,.bad
+        inc c                   ; GOLEM_SAVE_CLEAR
+.save_done:
+        ld a,c
+        ld (golem_value),a
+        ld a,GOLEM_CMD_SAVE
+        ld b,CMD_SAVE
+        jp .control_end
+
+; .golem bank [0-127]: the OPL3 engine's instrument bank, next to rom and
+; soundfont. Sent as SET_PARAM 5, as the settings below.
+.bank:
+        ld c,GOLEM_PARAM_BANK
+        ld de,text_bank
+        jr .set_param
+
+; .golem set volume|fx|channels|thru|keys|loud [value]: a firmware setting that survives
+; the MT-32 reset of play. Without a value it only reports.
+.set:
+        inc hl
+        ld a,(hl)
+        or $20
+        cp 't'
+        jp nz,.bad
+        inc hl
+        ld a,(hl)
+        cp ' '
+        jp nz,.bad
+        call skip_spaces
+        ld a,(hl)
+        or $20
+        ld c,GOLEM_PARAM_VOLUME
+        ld de,text_volume
+        cp 'v'
+        jr z,.set_param
+        inc c                   ; GOLEM_PARAM_FX
+        ld de,text_fx
+        cp 'f'
+        jr z,.set_param
+        inc c                   ; GOLEM_PARAM_CHANNELS
+        ld de,text_channels
+        cp 'c'
+        jr z,.set_param
+        inc c                   ; GOLEM_PARAM_THRU
+        ld de,text_thru
+        cp 't'
+        jr z,.set_param
+        inc c                   ; GOLEM_PARAM_KEYS
+        ld de,text_keys
+        cp 'k'
+        jr z,.set_param
+        inc c                   ; GOLEM_PARAM_BANK: .golem bank
+        inc c                   ; GOLEM_PARAM_LOUD
+        ld de,text_loud
+        cp 'l'
+        jr nz,.bad
+.set_param:
+        call match_word
+        jr nz,.bad
+        ld a,c
+        ld (golem_value),a
+        ld a,GOLEM_PARAM_QUERY
+        ld (golem_value2),a
+        call skip_spaces
+        call at_command_end
+        jr c,.set_done
+        ld a,c
+        cp GOLEM_PARAM_BANK
+        jr z,.set_number
+        or a
+        jr nz,.set_word
+.set_number:
+        call parse_u8
+        jr nc,.bad
+        cp 128                  ; bank: 0-127, the Golem checks what it has
+        jr nc,.bad
+        ld b,a
+        ld a,(golem_value)
+        or a
+        ld a,b
+        jr nz,.set_value
+        cp 101                  ; volume: 0-100
+        jr nc,.bad
+        jr .set_value
+.set_word:
+        cp GOLEM_PARAM_CHANNELS
+        ld a,(hl)
+        jr z,.set_channels
+        inc hl                  ; on or off: the second letter
+        ld a,(hl)
+        dec hl                  ; DEC HL keeps the flags
+        or $20
+        ld de,text_on
+        cp 'n'
+        ld a,1
+        jr z,.set_match
+        ld de,text_off
+        xor a
+        jr .set_match
+.set_channels:
+        or $20
+        ld de,text_std
+        cp 's'
+        ld a,0
+        jr z,.set_match
+        ld de,text_alt
+        inc a
+.set_match:
+        push af                 ; A = value
+        call match_word
+        pop bc                  ; B = value; flags from match_word
+        jr nz,.bad
+        ld a,b
+.set_value:
+        ld (golem_value2),a
+.set_done:
+        ld a,GOLEM_CMD_SET_PARAM
+        ld b,CMD_SET
+; Golem control commands end here. A = golem_command, B = command_mode.
+.control_end:
+        ld (golem_command),a
+        ld a,b
+        ld (command_mode),a
+        call skip_spaces
+        call at_command_end     ; carry: the command ends here
+        ret c
 .bad:
         or a
         ret
@@ -300,48 +486,48 @@ match_word:
 
 parse_note_args:
         call parse_u8
-        jp nc,.bad
+        jr nc,.bad
         cp 128
-        jp nc,.bad
+        jr nc,.bad
         ld (note_value),a
         ld a,(hl)
         cp ' '
-        jp nz,.bad
+        jr nz,.bad
 
         call parse_u8
-        jp nc,.bad
+        jr nc,.bad
         or a
-        jp z,.bad
+        jr z,.bad
         cp 128
-        jp nc,.bad
+        jr nc,.bad
         ld (note_velocity),a
         ld a,(hl)
         cp ' '
-        jp nz,.bad
+        jr nz,.bad
 
         call parse_u8
-        jp nc,.bad
+        jr nc,.bad
         or a
-        jp z,.bad
+        jr z,.bad
         cp 61
-        jp nc,.bad
+        jr nc,.bad
         ld (note_seconds),a
         call skip_spaces
         call at_command_end
-        jp c,.default_channel
+        jr c,.default_channel
 
         call parse_u8
-        jp nc,.bad
+        jr nc,.bad
         or a
-        jp z,.bad
+        jr z,.bad
         cp 17
-        jp nc,.bad
+        jr nc,.bad
         dec a
         ld (note_channel),a
         call skip_spaces
         call at_command_end
-        jp nc,.bad
-        jp .good
+        jr nc,.bad
+        jr .good
 .default_channel:
         xor a
         ld (note_channel),a
@@ -362,31 +548,31 @@ parse_u8:
 .digit:
         ld a,(hl)
         cp '0'
-        jp c,.done
+        jr c,.done
         cp '9'+1
-        jp nc,.done
+        jr nc,.done
         sub '0'
         ld d,a
         ld a,b
         add a,a
-        jp c,.bad
+        jr c,.bad
         ld e,a
         add a,a
-        jp c,.bad
+        jr c,.bad
         add a,a
-        jp c,.bad
+        jr c,.bad
         add a,e
-        jp c,.bad
+        jr c,.bad
         add a,d
-        jp c,.bad
+        jr c,.bad
         ld b,a
         inc hl
         inc c
-        jp .digit
+        jr .digit
 .done:
         ld a,c
         or a
-        jp z,.bad
+        jr z,.bad
         ld a,b
         scf
         ret
@@ -397,11 +583,11 @@ parse_u8:
 at_command_end:
         ld a,(hl)
         or a
-        jp z,.yes
+        jr z,.yes
         cp $0d
-        jp z,.yes
+        jr z,.yes
         cp ':'
-        jp z,.yes
+        jr z,.yes
         or a
         ret
 .yes:
@@ -413,7 +599,7 @@ skip_spaces:
         cp ' '
         ret nz
         inc hl
-        jp skip_spaces
+        jr skip_spaces
 
 query_driver:
         ld c,MT32_DRIVER_ID
@@ -423,13 +609,13 @@ query_driver:
         ret c
         ld a,b
         cp $4d
-        jp nz,.bad
+        jr nz,.bad
         ld a,c
         cp $54
-        jp nz,.bad
+        jr nz,.bad
         ld a,d
         or a                    ; ABI major 0 while experimental
-        jp nz,.bad
+        jr nz,.bad
         ld (driver_caps),hl
         or a
         ret

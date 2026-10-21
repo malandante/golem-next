@@ -12,9 +12,46 @@ There are three levels; pick the one that fits:
 | 1. Dot commands | `.golem play`, `.golem note`, `.golem engine` … from BASIC | Menus, jukeboxes, loaders, intros. The command takes over until the song ends. |
 | 2. GSEQ library | `GSEQ*.BIN` bank + `gseq.bas` (ZX Basic), or `gseq.s` (assembler) | Games: music that plays while the game runs, with loops, pause, song changes and sound effects. |
 | 3. The driver directly | `M_DRVAPI` calls to `GOLEM.DRV` | Your own MIDI: real-time notes, your own sequencer, SysEx. |
+| 4. MIDI input | `midiin.bas` (ZX Basic) or `midiin.s` (assembler) | Reading a keyboard: on the Golem's USB, or a DIN keyboard on a joystick port. |
 
 All of them are MIT licensed: you can ship them inside closed or commercial
 programs if you keep the copyright notice (`LICENSE`).
+
+## Quick start: Golem music in your game
+
+The shortest path, for a game that already has AY music:
+
+1. **Detect.** In your BASIC loader, before starting the game:
+
+   ```basic
+   10 ON ERROR GO TO 100
+   20 .golem engine mt32
+   30 ON ERROR
+   40 LET golem=1: GO TO 200
+   100 ON ERROR
+   110 LET golem=0: REM no driver or no Golem: AY music
+   200 REM ... load and start the game, telling it golem
+   ```
+
+   (A sketch: check it on your machine.) The user installs `GOLEM.DRV` once,
+   in the autoexec (user guide, section 4); `.install` of a driver that is
+   already installed fails, so a loader should not install it again.
+
+   `.golem engine` waits until the Golem confirms (or fails with an error
+   report), so after line 30 the synth is ready. Use `fluidsynth` instead of
+   `mt32` for General MIDI music. A user with an external synth on the joystick
+   port gets no answer, hence the error: if you want to support that case too,
+   use `.mt32 note 60 1 1 2` instead, which plays anyway.
+2. **Convert the music** with `gseq.py` (section 2.1): one `.GSQ` per song,
+   with `--loop` for in-game music.
+3. **Play it** with the GSEQ library (section 2.2 for ZX Basic, 2.3 for
+   assembler): `GsInit`, `GsOpen`, `GsStart`, and one `GsPump` per frame. Keep
+   the AY music for `golem=0`.
+4. **Release** the driver when the game ends (`GsStop`, then RELEASE).
+
+The music then plays on whatever the user has: a Golem (MT-32 or General
+MIDI), or a real MIDI synth on a joystick port with `.golem output left|right`.
+Your game does not need to know which.
 
 ## 1. Dot commands from BASIC
 
@@ -25,7 +62,8 @@ programs if you keep the copyright notice (`LICENSE`).
 40 .gm play "c:/music/level1.mid"
 ```
 
-- `.mt32` and `.gm` switch the Golem to MT-32 or General MIDI first;
+- `.mt32`, `.gm` and `.opl3` switch the Golem to MT-32, General MIDI
+  (FluidSynth) or General MIDI on OPL3 FM first;
   `.golem` leaves the engine as it is. With an external MIDI synth instead of a
   Golem they play anyway.
 - Every error is a normal NextZXOS error report, so `ON ERROR` works.
@@ -120,6 +158,25 @@ The product wraps at 65536 together with the counter, which is all the library
 needs. At 60 Hz a frame is 50/3 ms: multiply the 24-bit `FRAMES` (23672–23674)
 by 50 and divide by 3 in 32 bits. Interrupts must be on for `FRAMES` to count.
 A clock of your own works the same.
+
+`× 20` is close, not exact: the Next's frame length depends on the machine
+timing and on the video timing (`REG 17`, bits 2–0), because VGA 1–6 run the
+whole machine from a faster clock. At 50 Hz, in ms:
+
+| `REG 17` & 7 | Video | 48K timing (312 lines) | 128K/+3 timing (311 lines) |
+| --- | --- | ---: | ---: |
+| 0 | HDMI, VGA 0 (28 MHz) | 19.968 | 20.259 |
+| 1 | VGA 1 (28.57 MHz) | 19.569 | 19.854 |
+| 2 | VGA 2 (29.46 MHz) | 18.976 | 19.253 |
+| 3 | VGA 3 (30 MHz) | 18.637 | 18.909 |
+| 4 | VGA 4 (31 MHz) | 18.036 | 18.299 |
+| 5 | VGA 5 (32 MHz) | 17.472 | 17.727 |
+| 6 | VGA 6 (33 MHz) | 16.943 | 17.190 |
+
+With `× 20` a song runs 1.3 % slow in HDMI with +3 timing and 18 % fast in
+VGA 6. For exact time, read `REG 17` once at start-up and use the frame length
+from the table (in 1/256 ms steps, for example). `.gsq` and `.golem play` do
+this already by counting raster lines.
 
 **The budget.** The second parameter of `GsPump` is how many 16-byte writes the
 call may make. Once per frame, 1 gives 800 bytes/s and 4 covers the whole cable.
@@ -359,6 +416,58 @@ and replies are in [`mt32-pi-control.md`](mt32-pi-control.md) (in Spanish;
 the replies with `READ`. A SoundFont change can take seconds, and the Pi does
 not listen to MIDI meanwhile: wait for `READY` before playing. The source of
 `.golem` (`src/dot/golem/golem_client.s`) is a complete client.
+
+### 3.4 Reading MIDI: a keyboard on the Next
+
+Two ways for a keyboard's MIDI to reach the Next, both read with the driver's
+`READ`:
+
+- **USB keyboard on the Golem.** `.golem set keys on` (and `.golem save` to
+  keep it) makes the Golem send what is played to the Next as well, through the
+  same UART as its replies. The Golem still plays it. Needs firmware
+  golem-1.1.0 or later.
+- **DIN keyboard on a joystick port**, through the MIDI IN of the adapter in
+  `hardware/joystick-midi/`: `.golem output left` (or `right`); the driver then
+  reads pin 9 of that port. No Pi needed.
+
+`READ` gives raw bytes: the MIDI messages, possibly split across calls, with
+running status and real-time bytes in between, and the Golem's replies mixed
+in. The MIDI input library turns them into whole messages and drops the
+replies. In ZX Basic:
+
+```basic
+#include "midiin.bas"                  ' with midiin.s and mt32_api.inc next to it
+dim sysex(0 to 63) as ubyte
+MiInit(@sysex(0),64)                   ' SysEx buffer and its size (0: none)
+' ACQUIRE GOLEM.DRV (DriverCall(1), section 3.2)
+do
+    k=MiGet()                          ' one message per call, or MI_NONE
+    if k=MI_SHORT then
+        ' miStatus, miData1, miData2; miLength = 1, 2 or 3
+    elseif k=MI_SYSEX then
+        ' sysex(0 to miLength-1), F0 ... F7; miCut=1 if it did not fit
+    elseif k=MI_FAILED then
+        ' driver error in miError
+    end if
+loop
+```
+
+Call `MiGet` once per frame or more often: each call reads at most 16 bytes,
+and at 31250 baud up to about 63 bytes arrive per 50 Hz frame. Real-time
+messages (clock `F8`, start `FA`, active sensing `FE`…) come as one-byte
+`MI_SHORT` messages; a DIN keyboard often sends `FE` every 300 ms. The Golem
+does not forward real-time bytes from USB.
+
+In assembler, include `midiin.s` after `mt32_api.inc`: `mi_init` (HL = 16-byte
+receive buffer between `$4000` and `$FFFF`, DE = SysEx buffer, B = its size)
+and `mi_get` (A = `MI_GET_NONE`, `MI_GET_SHORT` with the message in
+`mi_message` and its length in B, or `MI_GET_SYSEX` with the length in B and
+C = 1 if cut; carry and A = driver error). The source has the details.
+
+`examples/midimon.bas` in the package is a MIDI monitor in ZX Basic: it
+prints every message in hexadecimal until SPACE is pressed. The `.midimon`
+dot command does the same from assembler (`src/dot/midimon.s`, which includes
+`midiin.s`), ready to use.
 
 ## 4. Memory map summary
 

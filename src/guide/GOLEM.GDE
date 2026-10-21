@@ -1,0 +1,403 @@
+@title golem-next commands
+@author Javier Aguilar Saavedra (malandante), Golem Retro
+@version 1.2.0
+@copyright (C)2026 Javier Aguilar Saavedra. MIT licence.
+@date 2026/10/17
+
+@index INDEX
+
+@-------------------------------------------------------------------------------
+@node MAIN
+@next PLAY
+
+@{c}@{h1}golem-next
+
+@{c}MIDI for the ZX Spectrum Next: a Golem or any MIDI synth
+
+@{h2}Commands
+
+ @{" .golem play " LINK PLAY}        Play a MIDI file
+ @{" .golem note " LINK NOTE}        Play a test note
+ @{" .golem status " LINK STATUS}      Driver and Golem state
+ @{" .golem engine " LINK ENGINE}      MT-32, FluidSynth or OPL3
+ @{" .golem rom " LINK ROM}         MT-32 ROM set
+ @{" .golem soundfont " LINK SOUNDFONT}   FluidSynth SoundFont
+ @{" .golem bank " LINK BANK}        OPL3 instrument bank
+ @{" .golem set " LINK SET}         Volume, effects, channels, keys...
+ @{" .golem save " LINK SAVE}        Keep the settings after switching off
+ @{" .golem output " LINK OUTPUT}      Golem or a joystick port
+ @{" .golem usb " LINK USB}         USB MIDI devices on the Pi
+ @{" .golem reset " LINK RESET}       Synth back to its factory state
+ @{" .mt32, .gm, .opl3 " LINK ALIASES}  The same, choosing the engine first
+
+@{h2}More
+
+ @{" Playing a MIDI keyboard " LINK KEYBOARD}
+ @{" Error messages " LINK ERRORS}
+ @{" Where to find more " LINK MORE}
+
+@{i}Right/Left@{ui} choose a link, @{i}ENTER@{ui} follows it, @{i}B@{ui} goes back, @{i}Q@{ui} quits.
+
+@-------------------------------------------------------------------------------
+@node PLAY
+@next NOTE
+@prev MAIN
+@toc MAIN
+@{r}golem-next
+@{c}@{h1}.golem play
+
+    @{b}.golem play song.mid@{ub}
+    @{b}.golem play "my song.mid"@{ub}
+
+Plays a standard MIDI file: format 0 or 1, up to 24 tracks and 1 MB.
+@{i}SPACE@{ui} stops it.
+
+Before each song @{b}play@{ub} resets the synth (like @{" .golem reset " LINK RESET}), so
+the previous song's SysEx does not carry over, releases the sustain pedal,
+stops the notes and sets every channel's volume to 100. At the end it stops
+all notes again.
+
+The settings of @{" .golem set " LINK SET} survive that reset.
+
+@-------------------------------------------------------------------------------
+@node NOTE
+@next STATUS
+@prev PLAY
+@toc MAIN
+@{r}golem-next
+@{c}@{h1}.golem note
+
+    @{b}.golem note <note> <velocity> <seconds> [channel]@{ub}
+    @{b}.golem note 60 100 2@{ub}
+
+Plays one test note: note 0-127, velocity 1-127, 1-60 seconds and channel
+1-16 (1 if omitted). It does not reset the synth.
+
+With the MT-32 engine channel 1 is silent unless the channels are
+@{" alternate " LINK SET}: use 2-10.
+
+@-------------------------------------------------------------------------------
+@node STATUS
+@next ENGINE
+@prev NOTE
+@toc MAIN
+@{r}golem-next
+@{c}@{h1}.golem status
+
+    @{b}.golem status@{ub}
+
+Checks the driver and asks the Golem for its engine, ROM set and SoundFont:
+
+    Golem: driver OK; session free; TX empty
+    Golem: output Golem (Accel. header)
+    Golem: engine MT32; ROM new; SoundFont 0
+
+With the OPL3 engine it also gives its bank: @{b}engine OPL3; bank 72; ...@{ub}
+
+"no answer" means the Pi did not reply within 0.2 seconds: it is off, still
+starting, runs other firmware, or the output is an external synth.
+"RX errors" means bytes arrived with errors.
+
+@-------------------------------------------------------------------------------
+@node ENGINE
+@next ROM
+@prev STATUS
+@toc MAIN
+@{r}golem-next
+@{c}@{h1}.golem engine
+
+    @{b}.golem engine mt32@{ub}
+    @{b}.golem engine fluidsynth@{ub}
+    @{b}.golem engine opl3@{ub}
+
+Switches the Golem's engine: MT-32 (Munt, for Sierra, LucasArts and other
+MT-32 music), FluidSynth (General MIDI with a SoundFont) or OPL3 (General
+MIDI with FM synthesis, the sound of a Sound Blaster 16 or AdLib; its
+instrument bank is chosen with @{" .golem bank " LINK BANK}).
+
+It waits until the Pi confirms the change, up to about 30 seconds.
+@{i}SPACE@{ui} ends the wait, but the Pi may still apply the change.
+
+@-------------------------------------------------------------------------------
+@node ROM
+@next SOUNDFONT
+@prev ENGINE
+@toc MAIN
+@{r}golem-next
+@{c}@{h1}.golem rom
+
+    @{b}.golem rom old@{ub}       MT-32 with version 1 ROMs
+    @{b}.golem rom new@{ub}       MT-32 with version 2 ROMs
+    @{b}.golem rom cm32l@{ub}     CM-32L
+
+The ROMs must be on the Pi's SD card, in the @{i}roms@{ui} folder.
+
+@-------------------------------------------------------------------------------
+@node SOUNDFONT
+@next BANK
+@prev ROM
+@toc MAIN
+@{r}golem-next
+@{c}@{h1}.golem soundfont
+
+    @{b}.golem soundfont <0-127>@{ub}
+
+Selects the FluidSynth SoundFont by number, in the order of the Pi's
+@{i}soundfonts@{ui} folder. It also works with the MT-32 engine selected: it
+prepares that SoundFont for the next @{b}engine fluidsynth@{ub}.
+
+Loading a SoundFont takes time. @{b}Do not play music while it loads:@{ub} the
+Pi does not serve the port meanwhile and could lose data.
+
+@-------------------------------------------------------------------------------
+@node BANK
+@next SET
+@prev SOUNDFONT
+@toc MAIN
+@{r}golem-next
+@{c}@{h1}.golem bank
+
+    @{b}.golem bank <0-127>@{ub}
+
+Instrument bank of the OPL3 engine (72 at start-up). 0-78 are built in; they
+come from games and sound drivers of the 1990s. Some to try: 0 AIL (The Fat
+Man), 58 The Fat Man for Windows 9x, 59 The Fat Man 4-operator, 72 DMXOPL3.
+Your own banks: WOPL files (made with OPL3 Bank Editor) in the @{i}opl3@{ui}
+folder of the Pi's SD card are 79 onwards, in alphabetical order.
+Changing the bank stops the notes and returns every channel to its first
+instrument. Needs firmware golem-1.2.0.
+Without a number it only reports the bank in use.
+
+@-------------------------------------------------------------------------------
+@node SET
+@next SAVE
+@prev BANK
+@toc MAIN
+@{r}golem-next
+@{c}@{h1}.golem set
+
+    @{b}.golem set volume <0-100>@{ub}
+    @{b}.golem set fx on|off@{ub}
+    @{b}.golem set channels std|alt@{ub}
+    @{b}.golem set thru on|off@{ub}
+    @{b}.golem set keys on|off@{ub}
+    @{b}.golem set loud on|off@{ub}
+
+Changes a setting in the Golem firmware. Without a value it only reports it,
+for example @{b}.golem set volume@{ub} answers "Golem: volume 80".
+
+@{h2}volume
+Master volume of both engines, 0-100 (100 at start-up). The same one that
+the buttons and the encoder of a Pi HAT change.
+
+@{h2}fx
+FluidSynth reverb and chorus for every channel. @{b}off@{ub} gives a dry sound,
+for example for a piano played from a keyboard. @{b}on@{ub} turns them back on
+with the levels of mt32-pi.cfg. It lasts across SoundFont changes.
+
+@{h2}channels
+MIDI channels of the MT-32 engine. @{b}std@{ub}: parts on channels 2-10, as a real
+MT-32. @{b}alt@{ub}: 1-8 and rhythm on 10, for keyboards that only send on
+channel 1 and for music written that way.
+
+@{h2}thru
+A USB MIDI keyboard on the Pi also plays the USB MIDI devices attached to it
+(see @{" .golem usb " LINK USB}).
+
+@{h2}keys
+A USB MIDI keyboard on the Pi also sends what you play to the Next, so
+programs there can read it (the Golem plays it as well). Whole messages, no
+clock or active sensing.
+
+@{h2}loud
+Makes the Golem louder without distortion: its sound is raised and the peaks
+are held down by a limiter. Through HDMI the Golem can only be half as loud
+as the Next's PCM sound; @{b}loud on@{ub} evens a game's music and effects out.
+Very quiet passages come up a little too. Needs firmware golem-1.2.0.
+
+@{h2}How long they last
+They survive @{b}play@{ub}, @{b}reset@{ub} and the SysEx a song sends to reset the MT-32.
+They last until the Pi is switched off, unless you keep them with
+@{" .golem save " LINK SAVE}. Otherwise, at start-up the volume is 100 and fx,
+channels and thru come from mt32-pi.cfg on the Pi's SD card. A song may still
+change the MT-32 volume itself.
+
+Needs Golem firmware golem-1.1.0 or later; an older one answers
+"firmware too old for command".
+
+@-------------------------------------------------------------------------------
+@node SAVE
+@next OUTPUT
+@prev SET
+@toc MAIN
+@{r}golem-next
+@{c}@{h1}.golem save
+
+    @{b}.golem save@{ub}
+    @{b}.golem save clear@{ub}
+
+@{b}save@{ub} keeps the Golem's current settings for the next time it starts:
+engine, ROM set, SoundFont and everything @{" .golem set " LINK SET} and
+@{" .golem usb " LINK USB} change. The Pi writes them to golem.cfg, next to
+mt32-pi.cfg on its SD card; golem.cfg is read after mt32-pi.cfg and wins.
+
+@{b}save clear@{ub} deletes golem.cfg: the next start uses mt32-pi.cfg alone.
+
+Do not play music while it saves. Needs Golem firmware golem-1.1.0 or later.
+
+@-------------------------------------------------------------------------------
+@node OUTPUT
+@next USB
+@prev SAVE
+@toc MAIN
+@{r}golem-next
+@{c}@{h1}.golem output
+
+    @{b}.golem output golem@{ub}      Accelerator header (the default)
+    @{b}.golem output left@{ub}       Pin 7 of the left joystick port
+    @{b}.golem output right@{ub}      Pin 7 of the right joystick port
+    @{b}.golem output@{ub}            Report the current output
+
+Chooses where MIDI goes, for every program that uses the driver, until the
+driver is uninstalled or the Next restarts. Put it in the autoexec after
+@{b}.install@{ub} to keep it.
+
+While a joystick port is the output, it does not work as a joystick (the
+other one does). With a joystick output, @{b}.mt32@{ub} and @{b}.gm@{ub} play straight away
+without asking the Golem.
+
+@-------------------------------------------------------------------------------
+@node USB
+@next RESET
+@prev OUTPUT
+@toc MAIN
+@{r}golem-next
+@{c}@{h1}.golem usb
+
+    @{b}.golem usb off@{ub}       Only the Golem plays
+    @{b}.golem usb on@{ub}        The Golem and the USB MIDI devices play
+    @{b}.golem usb bridge@{ub}    Only the USB MIDI devices; the Golem is silent
+    @{b}.golem usb@{ub}           Report the mode and the number of devices
+
+Forwards the Next's MIDI to USB MIDI devices attached to the Pi: a USB-DIN
+interface to a real MT-32, or another synth. Needs firmware golem-1.1.0 or
+later.
+
+@-------------------------------------------------------------------------------
+@node RESET
+@next ALIASES
+@prev USB
+@toc MAIN
+@{r}golem-next
+@{c}@{h1}.golem reset
+
+    @{b}.golem reset@{ub}
+
+Sends the MT-32 reset and General MIDI System On: clears what earlier songs
+loaded with SysEx (instruments, rhythm, effects). @{b}play@{ub} already does it
+before each song; use it before playing from another program.
+
+@-------------------------------------------------------------------------------
+@node ALIASES
+@next KEYBOARD
+@prev RESET
+@toc MAIN
+@{r}golem-next
+@{c}@{h1}.mt32, .gm and .opl3
+
+    @{b}.mt32 play game.mid@{ub}
+    @{b}.gm play song.mid@{ub}
+    @{b}.opl3 play song.mid@{ub}
+
+They take the same orders as @{b}.golem@{ub}. Before @{b}play@{ub} and @{b}note@{ub} they ask the
+Golem for the MT-32, the FluidSynth or the OPL3 engine and wait until it is
+ready.
+If nothing answers within 0.2 seconds (an external synth), they play anyway.
+@{b}.golem@{ub} leaves the engine as it is.
+
+@-------------------------------------------------------------------------------
+@node KEYBOARD
+@next ERRORS
+@prev ALIASES
+@toc MAIN
+@{r}golem-next
+@{c}@{h1}Playing a MIDI keyboard
+
+A MIDI keyboard on the Pi's USB (directly or through a USB-MIDI interface)
+plays the Golem alongside the Next. Both share the 16 channels.
+
+ - FluidSynth: use channel 16, the one GM songs use least. 10 is drums.
+ - MT-32: a keyboard on channel 1 needs @{b}.golem set channels alt@{ub}.
+ - A dry piano: @{b}.golem set fx off@{ub}.
+ - Sound late through the TV: turn on the TV's game mode.
+ - For programs on the Next to read the keyboard: @{b}.golem set keys on@{ub}.
+   @{b}.midimon@{ub} shows what arrives, in hexadecimal; SPACE ends.
+
+@-------------------------------------------------------------------------------
+@node ERRORS
+@next MORE
+@prev KEYBOARD
+@toc MAIN
+@{r}golem-next
+@{c}@{h1}Error messages
+
+Errors return to BASIC as error reports, so @{b}ON ERROR@{ub} can handle them.
+
+@{b}GOLEM.DRV missing or incompat.@{ub}
+  Install the driver: .install "c:/nextzxos/GOLEM.DRV"
+
+@{b}firmware too old for command@{ub}
+  The Pi's firmware lacks this command: update to the latest golem release.
+
+@{b}transport error or timeout@{ub}
+  The Pi did not answer: check it runs the Golem firmware and the cable.
+
+@{b}command rejected by Golem@{ub}
+  Not available: no ROM or SoundFont with that number, or no SoundFont at all.
+
+@{b}cannot open file@{ub}, @{b}unsupported SMF@{ub}, @{b}invalid SMF event@{ub}
+  The MIDI file is missing, has more than 24 tracks or is damaged.
+
+@-------------------------------------------------------------------------------
+@node MORE
+@prev ERRORS
+@toc MAIN
+@{r}golem-next
+@{c}@{h1}Where to find more
+
+The full user guide, the programmer's guide and the GSEQ music library are in
+the docs folder of the golem-next package:
+
+    github.com/malandante/golem-next
+
+The Golem firmware (GPL-3.0) is at github.com/malandante/mt32-pi.
+
+@-------------------------------------------------------------------------------
+@node INDEX
+@{r}golem-next
+@{c}@{h1}Index
+
+ @{" .gm " LINK ALIASES}
+ @{" .mt32 " LINK ALIASES}
+ @{" .opl3 " LINK ALIASES}
+ @{" bank " LINK BANK}
+ @{" channels " LINK SET}
+ @{" effects (fx) " LINK SET}
+ @{" engine " LINK ENGINE}
+ @{" FM, OPL3 " LINK ENGINE}
+ @{" errors " LINK ERRORS}
+ @{" keyboard " LINK KEYBOARD}
+ @{" keys " LINK SET}
+ @{" loud " LINK SET}
+ @{" note " LINK NOTE}
+ @{" output " LINK OUTPUT}
+ @{" play " LINK PLAY}
+ @{" reset " LINK RESET}
+ @{" rom " LINK ROM}
+ @{" save " LINK SAVE}
+ @{" set " LINK SET}
+ @{" soundfont " LINK SOUNDFONT}
+ @{" status " LINK STATUS}
+ @{" thru " LINK SET}
+ @{" usb " LINK USB}
+ @{" volume " LINK SET}

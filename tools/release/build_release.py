@@ -26,7 +26,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 ZIP_DATE = (2026, 1, 1, 0, 0, 0)
-DOTS = ("GOLEM", "MT32", "GM", "GSQ")
+DOTS = ("GOLEM", "MT32", "GM", "OPL3", "GSQ", "MIDIMON")
 SLOTS = ("4000", "6000", "8000", "A000", "C000", "E000")
 DOCS = {
     "docs/guide.md": "docs/user/guide.md",
@@ -43,7 +43,13 @@ LIB_SOURCES = {
     "lib/gseq.s": "src/lib/gseq.s",
     "lib/mt32_api.inc": "include/mt32_api.inc",
     "lib/golem_api.inc": "include/golem_api.inc",
+    "lib/midiin.s": "src/lib/midiin.s",
+    "lib/midiin.bas": "src/lib/midiin.bas",
+    "examples/midimon.bas": "src/examples/midimon.bas",
     "tools/gseq.py": "tools/host/gseq.py",
+    "midi/DRY.MID": "src/midi/DRY.MID",
+    "midi/EFFECTS.MID": "src/midi/EFFECTS.MID",
+    "docs/guides/GOLEM.GDE": "src/guide/GOLEM.GDE",
 }
 
 README = """golem-next {version}
@@ -56,16 +62,21 @@ synthesiser.
 Install (full guide: docs/guide.md, in Spanish docs/guia.md):
 
   nextzxos/GOLEM.DRV   -> c:/nextzxos/GOLEM.DRV
-  dot/GOLEM, MT32, GM  -> c:/dot/
-  dot/GSQ              -> c:/dot/
+  dot/GOLEM, MT32, GM, OPL3 -> c:/dot/
+  dot/GSQ, MIDIMON     -> c:/dot/
+  docs/guides/GOLEM.GDE -> c:/docs/guides/   (help on the Next: .guide golem)
 
   .install "c:/nextzxos/GOLEM.DRV"
   .golem status
-  .golem play song.mid      (.mt32 / .gm first select the MT-32 / GM engine)
+  .golem play song.mid      (.mt32 / .gm / .opl3 first select that engine)
 
 lib/    GSEQ library banks (GSEQ4000.BIN ... GSEQE000.BIN, one per slot),
-        the ZX Basic binding gseq.bas and the assembler source.
+        the ZX Basic binding gseq.bas and the assembler source; the MIDI
+        input library midiin.bas / midiin.s (reading a keyboard).
+examples/ midimon.bas, a MIDI monitor (ZX Basic).
 tools/  gseq.py, the MIDI to GSEQ converter (Python 3).
+midi/   DRY.MID turns FluidSynth reverb and chorus off (keyboard playing),
+        EFFECTS.MID back to normal: .golem play DRY.MID
 
 The Golem firmware is a separate program under GPL-3.0; its source and
 kernels are at {firmware}.
@@ -135,12 +146,13 @@ def main() -> int:
     package = args.out / name
     if package.exists():
         shutil.rmtree(package)
-    for folder in ("nextzxos", "dot", "lib", "tools", "docs"):
+    for folder in ("nextzxos", "dot", "lib", "tools", "docs", "midi"):
         (package / folder).mkdir(parents=True)
     with tempfile.TemporaryDirectory() as tmp:
         build(args.assembler, path, Path(tmp), package)
     check(package)
     for target, source in {**DOCS, **LIB_SOURCES}.items():
+        (package / target).parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(REPO / source, package / target)
     title = f"golem-next {args.version}"
     readme = README.format(version=args.version, rule="=" * len(title), firmware=args.firmware)

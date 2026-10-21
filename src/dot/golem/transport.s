@@ -8,10 +8,10 @@ show_status:
         rst $08
         db NEXTZXOS_M_DRVAPI
         ret c
-        ld a,c
-        ld (status_flags),a
         ld a,b
         ld (status_uart),a
+        ld a,c                  ; C bit 0: session acquired (B bit 0 is RX data)
+        ld (status_flags),a
         bit 0,a
         ld hl,msg_status_free
         jp z,.owner_ready
@@ -35,7 +35,11 @@ show_status:
         or a
         ret
 
+; Duration in real milliseconds (#92): the same raster clock as play (1 ms
+; slices of 15/16 lines, 224 or 228 T per line), not 50 or 60 frames per
+; second, since a frame lasts 20.26 ms with +3 timing at 50 Hz.
 play_note:
+        call build_frame_quantum ; measures the frame before the note starts
         ld a,(note_channel)
         or $90
         ld (IO_BUFFER),a
@@ -48,43 +52,39 @@ play_note:
         call write_all
         ret c
 
-        call detect_note_rate
+        xor a
+        ld (elapsed_lines),a
+        ld (elapsed_lines+1),a
+        ld (elapsed_lines+2),a
+        call read_raster_line
+        ld (raster_previous),hl
+        ld a,1
+        ld (scheduler_active),a
         ld a,(note_seconds)
         ld (note_seconds_left),a
 .second:
-        ld a,(note_frames_per_second)
-        ld b,a
-.frame:
+        ld bc,1000
+.millisecond:
         push bc
-        call wait_frame
+        call consume_raster_line
         pop bc
         jp c,.cancel
-        djnz .frame
+        dec bc
+        ld a,b
+        or c
+        jp nz,.millisecond
         ld a,(note_seconds_left)
         dec a
         ld (note_seconds_left),a
         jp nz,.second
-        call send_note_off
-        ret
+        xor a
+        ld (scheduler_active),a
+        jp send_note_off
 .cancel:
+        xor a
+        ld (scheduler_active),a
         call send_note_off
         scf
-        ret
-
-detect_note_rate:
-        ld bc,NEXTREG_SELECT
-        ld a,NXR_PERIPHERAL1
-        out (c),a
-        inc b
-        in a,(c)
-        and $04
-        ld a,50
-        jp z,.store
-        ld a,60
-.store:
-        ld (note_frames_per_second),a
-        xor a                    ; wait_frame must not adjust SMF time state
-        ld (refresh_60),a
         ret
 
 send_note_off:
@@ -279,6 +279,28 @@ clean_synth:
         or a
         ret
 
+RESET_MESSAGES_LENGTH equ 17   ; reset_messages in data.s (SNasm has no $-label)
+
+; Sends the MT-32 "all parameters reset" SysEx (address $7F0000) and GM System
+; On, then waits 25 frames: Munt resets at once, a real MT-32 on a joystick
+; output needs time. WRITE takes buffers at $4000 or above, hence the copy.
+reset_synth:
+        ld hl,reset_messages
+        ld de,IO_BUFFER
+        ld bc,RESET_MESSAGES_LENGTH
+        ldir
+        ld hl,IO_BUFFER
+        ld de,RESET_MESSAGES_LENGTH
+        call write_all
+        ret c
+        ld b,25
+.wait:
+        ei
+        halt
+        djnz .wait
+        or a
+        ret
+
 drain_driver:
         ld de,250
 .loop:
@@ -354,10 +376,20 @@ free_bank:
         db M_P3DOS
         ret
 
+; HL=zero-terminated text; a PFX byte prints msg_prefix in its place.
 print_z:
         ld a,(hl)
         or a
         ret z
+        cp PFX
+        jr z,.prefix
         rst $10
+.next:
         inc hl
-        jp print_z
+        jr print_z
+.prefix:
+        push hl
+        ld hl,msg_prefix
+        call print_z
+        pop hl
+        jr .next

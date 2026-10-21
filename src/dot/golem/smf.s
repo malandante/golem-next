@@ -149,11 +149,19 @@ text_mthd:
         db "MThd"
 text_mtrk:
         db "MTrk"
+; System clock in kHz for NextReg $11 video timings 0-7 (VGA 0-6, then 27 MHz),
+; as in the driver's baud table. 28571 and 29464 are 200000/7 and 825000/28
+; rounded: 15 ppm, a second in 18 hours.
+system_khz:
+        dw 28000,28571,29464,30000,31000,32000,33000,27000
 
-; Build a 1 ms musical quantum and its exact raster cadence: 1 ms is 3500 T,
-; that is 15 + 5/8 lines of 224 T or 15 + 20/57 lines of 228 T, distributed as
-; 15- and 16-line slices (#7). This keeps the long-term tempo exact while
-; leaving enough CPU time for parsing and transport at 3.5 MHz.
+; Build a 1 ms musical quantum and its exact raster cadence (#7). Video runs
+; from the system clock divided by 8: 3.5 MHz at 28 MHz (HDMI and VGA 0), up
+; to 4.125 MHz in VGA 6. One millisecond is Fsys/8000 T-states, so with lines
+; of 224 or 228 T it is Fsys(kHz) / 1792 or / 1824 lines: 15 + 5/8 lines at
+; 28 MHz and 224 T. The lines are spent in slices of base or base+1 lines,
+; with the remainder spread Bresenham-style, which keeps the long-term tempo
+; exact while leaving CPU time for parsing and transport.
 build_frame_quantum:
         ld bc,NEXTREG_SELECT
         ld a,NXR_PERIPHERAL1
@@ -192,12 +200,10 @@ build_frame_quantum:
         or a
         sbc hl,de
         jp z,.timing_228
-        ld hl,8                    ; 224 T per line: 15 + 5/8 lines per ms
-        ld de,5
+        ld de,1792                 ; 8 x 224
         jp .lines_ready
 .timing_228:
-        ld hl,57                   ; 228 T per line: 15 + 20/57 lines per ms
-        ld de,20
+        ld de,1824                 ; 8 x 228
         jp .lines_ready
 .default_lines:
         ld bc,312
@@ -206,17 +212,40 @@ build_frame_quantum:
         jp z,.default_224
         ld bc,262
 .default_224:
-        ld hl,8
-        ld de,5
+        ld de,1792                 ; 8 x 224
 .lines_ready:
         ld (raster_lines),bc
-        ld (slice_period),hl
-        ld (slice_remainder),de
+        ld (slice_period),de
+        ; HL = Fsys in kHz for the video timing in NextReg $11 (bits 2:0)
+        ld bc,NEXTREG_SELECT
+        ld a,NXR_VIDEO_TIMING
+        out (c),a
+        inc b
+        in a,(c)
+        and $07
+        add a,a
+        ld c,a
+        ld b,0
+        ld hl,system_khz
+        add hl,bc
+        ld a,(hl)
+        inc hl
+        ld h,(hl)
+        ld l,a
+        ld a,-1                    ; A = whole lines per ms, HL = remainder
+.divide:
+        inc a
         or a
         sbc hl,de
-        ld (slice_phase),hl
-        ld a,15
+        jp nc,.divide
+        add hl,de
+        ld (slice_base),a
         ld (slice_lines),a
+        ld (slice_remainder),hl
+        ex de,hl
+        or a
+        sbc hl,de
+        ld (slice_phase),hl        ; period - remainder
 
         xor a
         ld (frame_quantum),a
