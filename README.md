@@ -18,6 +18,7 @@ on the [releases page](https://github.com/malandante/golem-next/releases). The
 Golem firmware and its source are at
 [malandante/mt32-pi](https://github.com/malandante/mt32-pi/releases).
 
+**Quick start** (the cable, the cards, the first sound): [English](docs/user/quickstart.md) · [español](docs/user/inicio-rapido.md).
 **User guide:** [English](docs/user/guide.md) · [español](docs/user/guia.md).
 **Programmer's guide:** [music and MIDI in your own programs](docs/programming.md) (BASIC, ZX Basic, assembler).
 **Release notes:** [RELEASE_NOTES.md](RELEASE_NOTES.md) · **Roadmap:** [what has been done and what comes next](ROADMAP.md).
