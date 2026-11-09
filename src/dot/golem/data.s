@@ -2,8 +2,9 @@
 ; Included by src/dot/golem_cli.s; not assembled on its own. Uses the
 ; constants and labels defined there and in the other modules.
 ;
-; Mutable workspace in the dot command area below $4000; the I/O buffer and
-; local stack live in the private work bank at $6000 (IO_BUFFER, LOCAL_STACK).
+; Mutable workspace in the dot command area below $4000; the I/O buffer, the
+; bank list, the track states and the local stack live in the private work
+; bank at $6000 (IO_BUFFER, file_banks, track_states, LOCAL_STACK).
 
 saved_sp:               dw 0
 driver_caps:            dw 0
@@ -26,7 +27,6 @@ sysex_owner:            dw 0
 load_index:             db 0
 caller_speed:           db 0
 speed_saved:            db 0
-file_banks:             ds MAX_FILE_BANKS
 saved_mmu:              ds 4
 saved_nextreg_selector: db 0
 file_length:            ds 3
@@ -93,10 +93,10 @@ note_velocity:          db 0
 note_seconds:           db 0
 note_channel:           db 0
 note_seconds_left:      db 0
-; The file name is only needed to open the file (load_file), before
-; parse_smf fills track_states, so both share the same 288 bytes.
-filename:
-track_states:           ds MAX_TRACKS*ST_SIZE
+play_bank:              db $ff  ; play FILE BANK; $ff: none (fresh each run)
+; The file name is parsed before the work bank is mapped (the command line
+; may lie in $6000-$7fff), so it stays here; up to 255 characters.
+filename:               ds 256
 
 msg_usage:
         db $0d,".golem play|note|status|engine|"

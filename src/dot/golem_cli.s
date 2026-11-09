@@ -35,6 +35,9 @@ FILE_WINDOW     equ $e000       ; MMU7: the reader's view of the file
 LOAD_WINDOW     equ $8000       ; MMU4: where load_file reads each bank (#57)
 MAX_FILE_BANKS  equ 128         ; 1 MB
 IO_BUFFER       equ $6000       ; inside the private work bank at MMU3
+IO_BUFFER_SIZE  equ $100        ; its uses: up to 17 bytes (the reset)
+file_banks      equ IO_BUFFER+IO_BUFFER_SIZE    ; MAX_FILE_BANKS bytes
+track_states    equ file_banks+MAX_FILE_BANKS   ; MAX_TRACKS x ST_SIZE bytes
 LOCAL_STACK     equ $7ff0       ; idem; bank 5 is never written here
 MAX_TRACKS      equ 24
 

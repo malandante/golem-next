@@ -48,9 +48,11 @@
 
     @{b}.golem play song.mid@{ub}
     @{b}.golem play "my song.mid"@{ub}
+    @{b}.opl3 play song.mid 58@{ub}
 
 Plays a standard MIDI file: format 0 or 1, up to 24 tracks and 1 MB.
-@{i}SPACE@{ui} stops it.
+@{i}SPACE@{ui} stops it. A number after the file chooses the OPL3 bank first,
+as @{" .golem bank " LINK BANK} does.
 
 Before each song @{b}play@{ub} resets the synth (like @{" .golem reset " LINK RESET}), so
 the previous song's SysEx does not carry over, releases the sustain pedal,

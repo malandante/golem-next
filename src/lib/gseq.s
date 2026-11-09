@@ -65,8 +65,10 @@ gs_init:
         ld (gs_out_len),a
         ld (gs_direct_len),a
         ld (gs_errcode),a
+        ld (gs_long_started),a
         ld hl,0
         ld (gs_sysex_left),hl
+        ld (gs_long_left),hl
         dec hl
         ld (gs_channels),hl     ; all 16 channels until gs_set_channels
         ld a,GS_STOPPED
@@ -439,6 +441,35 @@ gs_send:
         or a
         ret
 
+; gs_send_long: HL = a message of any length (a Golem frame, a long SysEx),
+; DE = its length. It goes out whole, never mixed with other bytes: it starts
+; when the music due has gone (and never inside a SysEx of the music) and,
+; once started, goes before anything else until its end, so a long one delays
+; the music by its own length (300 bytes: about 0.1 s at 31250 baud). The
+; bytes are read from HL while they are sent: leave them unchanged and outside
+; the MMU slot given to gs_init until it has gone. DE = 0 only asks.
+; Carry while a previous long message is still being sent (and then nothing is
+; queued); NC and A = state otherwise. This is the sender gp_set_sender takes
+; (gparam.s).
+gs_send_long:
+        push hl
+        ld hl,(gs_long_left)
+        ld a,h
+        or l
+        pop hl
+        scf
+        ret nz                  ; the previous one has not gone
+        ld a,d
+        or e
+        jr z,.state             ; only asking
+        ld (gs_long_ptr),hl
+        ld (gs_long_left),de
+        xor a
+        ld (gs_long_started),a
+.state: ld a,(gs_state)
+        or a                    ; NC, A = state
+        ret
+
 ; gs_query: A = state, HL = gs_info (state, error, notice, loops, time ms,
 ; target synth from header byte 15: 0 any, 1 MT-32/CM-32L, 2 General MIDI).
 ; Z clear (NZ) while bytes or a cleanup are still pending.
@@ -483,6 +514,12 @@ gs_query:
         or b
         ld b,a
         ld a,(gs_sysex_left+1)
+        or b
+        ld b,a
+        ld a,(gs_long_left)
+        or b
+        ld b,a
+        ld a,(gs_long_left+1)
         or b                    ; Z if idle
         ld a,(gs_state)
         ret
@@ -535,7 +572,13 @@ gs_pump:
         jp c,.record_error
         jp .commit
 .direct:
-        ld a,(gs_direct_len)    ; 3. a direct (client) message
+        ld a,(gs_long_started)  ; 3. the rest of a long message already begun
+        or a
+        jp z,.short
+        call gs_copy_long
+        jp .commit
+.short:
+        ld a,(gs_direct_len)    ; 4. a direct (client) message
         or a
         jp z,.task
         ld c,a
@@ -550,17 +593,29 @@ gs_pump:
 .task:
         xor a
         ld (gs_used),a
-        ld a,(gs_task)          ; 4. pause, stop or resume work
+        ld a,(gs_task)          ; 5. pause, stop or resume work
         or a
         jp z,.music
         call gs_task_step
         jp .commit
 .music:
-        ld a,(gs_state)         ; 5. music that is due
+        ld a,(gs_state)         ; 6. music that is due
         cp GS_PLAYING
-        jp nz,.done
+        jp nz,.long
         call gs_fill
         jp c,.record_error
+        ld a,(gs_used)
+        or a
+        jp nz,.commit
+        ld hl,(gs_sysex_left)   ; a SysEx of the music has begun: it goes first
+        ld a,h
+        or l
+        jp nz,.commit
+.long:  ld hl,(gs_long_left)    ; 7. nothing more due: a long message starts
+        ld a,h
+        or l
+        jp z,.commit
+        call gs_copy_long
 .commit:
         ld a,(gs_used)
         ld (gs_out_len),a
@@ -628,6 +683,35 @@ gs_pump:
         pop ix
         ld a,GS_ERR_DRIVER
         scf
+        ret
+
+; The next part of the long message (up to 16 bytes) into the output buffer
+gs_copy_long:
+        ld hl,(gs_long_left)
+        ld a,h
+        or a
+        ld a,GS_OUT_SIZE
+        jr nz,.count
+        ld a,l
+        cp GS_OUT_SIZE
+        jr c,.count
+        ld a,GS_OUT_SIZE
+.count: ld (gs_used),a
+        ld c,a
+        ld b,0
+        or a
+        sbc hl,bc
+        ld (gs_long_left),hl
+        ld a,h
+        or l
+        ld a,0
+        jr z,.last
+        inc a
+.last:  ld (gs_long_started),a  ; begun, unless that was all of it
+        ld hl,(gs_long_ptr)
+        ld de,(gs_out)
+        ldir
+        ld (gs_long_ptr),hl
         ret
 
 ; now += (DE - last now) modulo 65536
@@ -1434,6 +1518,9 @@ gs_out_len:      db 0
 gs_used:         db 0
 gs_msg_start:    db 0
 gs_direct_len:   db 0
+gs_long_ptr:     dw 0
+gs_long_left:    dw 0
+gs_long_started: db 0
 gs_direct:       ds GS_OUT_SIZE
 gs_records:      db 0
 gs_status:       db 0

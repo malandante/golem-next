@@ -68,9 +68,9 @@ start:
         ld b,MT32_FN_QUERY
         rst $08
         db NEXTZXOS_M_DRVAPI
+        ld a,l                      ; capabilities, before HL is reused
         ld hl,err_driver
         jp c,fail
-        ld a,l
         and MT32_CAP_RX_NONBLOCKING
         ld hl,err_no_rx
         jp z,fail

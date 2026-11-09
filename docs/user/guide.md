@@ -147,7 +147,7 @@ and puts it back as it was afterwards. It uses the experimental driver ID
 
 | Command | What it does |
 | --- | --- |
-| `.golem play file.mid` | Plays a MIDI file (SMF 0 or 1, up to 24 tracks and 1 MB). SPACE cancels. |
+| `.golem play file.mid [bank]` | Plays a MIDI file (SMF 0 or 1, up to 24 tracks and 1 MB). SPACE cancels. A number after the file first chooses the OPL3 bank, as `.golem bank` does: `.opl3 play doom.mid 72`. |
 | `.golem note <note> <vel> <sec> [channel]` | Plays a test note: note 0–127, velocity 1–127, 1–60 seconds, channel 1–16 (1 if omitted). With the MT-32 engine use channels 2–10: channel 1 is silent. |
 | `.golem status` | Checks the driver and asks the Golem for its engine, ROM set and SoundFont, e.g. "Golem: engine MT32; ROM new; SoundFont 0"; with the OPL3 engine also its bank ("engine OPL3; bank 72; …"). Without an answer within 0.2 s it says "no answer". "RX errors" means bytes were received with errors. |
 | `.golem engine mt32` / `fluidsynth` / `opl3` | Switches the Pi's engine: MT-32 (Munt), General MIDI (FluidSynth) or General MIDI with OPL3 FM synthesis, the sound of a Sound Blaster 16 (libADLMIDI; firmware golem-1.2.0). |

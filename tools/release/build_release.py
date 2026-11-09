@@ -26,7 +26,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 ZIP_DATE = (2026, 1, 1, 0, 0, 0)
-DOTS = ("GOLEM", "MT32", "GM", "OPL3", "GSQ", "MIDIMON")
+DOTS = ("GOLEM", "MT32", "GM", "OPL3", "GSQ", "MIDIMON", "GPARAM")
 SLOTS = ("4000", "6000", "8000", "A000", "C000", "E000")
 DOCS = {
     "docs/guide.md": "docs/user/guide.md",
@@ -35,6 +35,7 @@ DOCS = {
     "docs/gseq.md": "docs/m6-gseq.md",
     "docs/driver-api.md": "docs/driver-api.md",
     "docs/golem-protocol.md": "docs/mt32-pi-control.md",
+    "docs/sound-params.md": "docs/sound-params.md",
     "LICENSE": "LICENSE",
     "RELEASE_NOTES.md": "RELEASE_NOTES.md",
 }
@@ -45,8 +46,11 @@ LIB_SOURCES = {
     "lib/golem_api.inc": "include/golem_api.inc",
     "lib/midiin.s": "src/lib/midiin.s",
     "lib/midiin.bas": "src/lib/midiin.bas",
+    "lib/gparam.s": "src/lib/gparam.s",
+    "lib/gparam.bas": "src/lib/gparam.bas",
     "examples/midimon.bas": "src/examples/midimon.bas",
     "tools/gseq.py": "tools/host/gseq.py",
+    "tools/golembank.py": "tools/host/golembank.py",
     "midi/DRY.MID": "src/midi/DRY.MID",
     "midi/EFFECTS.MID": "src/midi/EFFECTS.MID",
     "docs/guides/GOLEM.GDE": "src/guide/GOLEM.GDE",
@@ -63,7 +67,7 @@ Install (full guide: docs/guide.md, in Spanish docs/guia.md):
 
   nextzxos/GOLEM.DRV   -> c:/nextzxos/GOLEM.DRV
   dot/GOLEM, MT32, GM, OPL3 -> c:/dot/
-  dot/GSQ, MIDIMON     -> c:/dot/
+  dot/GSQ, MIDIMON, GPARAM -> c:/dot/
   docs/guides/GOLEM.GDE -> c:/docs/guides/   (help on the Next: .guide golem)
 
   .install "c:/nextzxos/GOLEM.DRV"
@@ -72,9 +76,12 @@ Install (full guide: docs/guide.md, in Spanish docs/guia.md):
 
 lib/    GSEQ library banks (GSEQ4000.BIN ... GSEQE000.BIN, one per slot),
         the ZX Basic binding gseq.bas and the assembler source; the MIDI
-        input library midiin.bas / midiin.s (reading a keyboard).
+        input library midiin.bas / midiin.s (reading a keyboard); the
+        sound-parameter library banks (GPAR4000.BIN ... GPARE000.BIN),
+        gparam.bas and its source gparam.s.
 examples/ midimon.bas, a MIDI monitor (ZX Basic).
-tools/  gseq.py, the MIDI to GSEQ converter (Python 3).
+tools/  gseq.py, the MIDI to GSEQ converter, and golembank.py, OPL3 banks
+        and .SBI instruments (Python 3).
 midi/   DRY.MID turns FluidSynth reverb and chorus off (keyboard playing),
         EFFECTS.MID back to normal: .golem play DRY.MID
 
@@ -112,6 +119,8 @@ def build(assembler: str, path: str, tree: Path, out: Path) -> None:
     for slot in SLOTS:
         assemble(assembler, path, tree / "src" / "lib" / f"gseq_{slot.lower()}.s",
                  out / "lib" / f"GSEQ{slot}.BIN")
+        assemble(assembler, path, tree / "src" / "lib" / f"gparam_{slot.lower()}.s",
+                 out / "lib" / f"GPAR{slot}.BIN")
 
 
 def check(out: Path) -> None:
@@ -127,6 +136,9 @@ def check(out: Path) -> None:
         data = (out / "lib" / f"GSEQ{slot}.BIN").read_bytes()
         if not 0 < len(data) <= 8192 or data[27:32] != b"GSEQ\x01":
             sys.exit(f"GSEQ{slot}.BIN: bad size or signature")
+        data = (out / "lib" / f"GPAR{slot}.BIN").read_bytes()
+        if not 0 < len(data) <= 8192 or data[27:32] != b"GPAR\x01":
+            sys.exit(f"GPAR{slot}.BIN: bad size or signature")
 
 
 def main() -> int:

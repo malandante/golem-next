@@ -63,6 +63,7 @@ dim gsResultA as ubyte
 dim gsResultCarry as ubyte
 dim gsResultZero as ubyte
 dim gsInfoAddress as uinteger
+dim gsMinor as ubyte
 
 sub GsSetLibrary(bank as ubyte,slotReg as ubyte)
     gsLibraryBank=bank
@@ -196,6 +197,7 @@ function GsInit(windowReg as ubyte,keys as ubyte,channels as uinteger) as ubyte
         gsError=GS_ERR_LIBRARY
         return GS_FAILED
     end if
+    gsMinor=gsInfo(5)
     gsRegA=windowReg
     gsRegB=keys
     gsRegHL=channels
@@ -243,6 +245,25 @@ function GsSend(address as uinteger,length as ubyte) as ubyte
     gsRegHL=address
     gsRegB=length
     return GsRun(7)
+end function
+
+' A message of any length (a Golem frame), sent whole when the music due has
+' gone. Its bytes are read while they leave: keep them unchanged until
+' GsSendLong(address,0) stops failing. Needs library minor 1: GS_FAILED with
+' gsError=GS_ERR_LIBRARY on an older bank, GS_FAILED with GS_ERR_STATE while
+' the previous one is still going.
+function GsSendLong(address as uinteger,length as uinteger) as ubyte
+    if gsMinor<1 then
+        gsError=GS_ERR_LIBRARY
+        return GS_FAILED
+    end if
+    gsRegHL=address
+    gsRegDE=length
+    if GsRun(11)=GS_FAILED then
+        gsError=GS_ERR_STATE
+        return GS_FAILED
+    end if
+    return gsResultA
 end function
 
 ' State, with gsInfo filled in and gsBusy=1 while bytes or a cleanup are

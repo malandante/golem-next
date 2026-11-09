@@ -64,20 +64,30 @@ send_golem_control:
 ; external synth and the command plays anyway. Carry: ERROR, cancel or
 ; transport failure (golem_remote_error and cancelled tell which).
 select_engine:
-        ld a,CLI_ENGINE
-        or a
-        ret z
         ld a,(driver_caps+1)    ; output on a joystick port: external synth,
         or a                    ; no Golem to ask (#64)
         ret nz
         ld a,(driver_caps)
         and MT32_CAP_RX_NONBLOCKING
         ret z                   ; AND clears carry
+        ld a,CLI_ENGINE
+        or a
+        jr z,.bank              ; .golem: the engine stays as it is
         ld a,GOLEM_CMD_SET_SYNTH
         ld (golem_command),a
         ld a,CLI_ENGINE-1       ; 0 MT-32, 1 FluidSynth, 2 OPL3
         ld (golem_value),a
-        ld a,r
+        call .send
+        ret c
+.bank:  ld a,(play_bank)        ; play FILE BANK: SET_PARAM 5, as .golem bank
+        ld (golem_value2),a
+        inc a
+        ret z                   ; none ($ff); carry is clear here
+        ld a,GOLEM_CMD_SET_PARAM
+        ld (golem_command),a
+        ld a,GOLEM_PARAM_BANK
+        ld (golem_value),a
+.send:  ld a,r
         and $7f
         ld (golem_transaction),a
         ld a,GOLEM_ACCEPT_FRAMES

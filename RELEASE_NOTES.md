@@ -1,5 +1,77 @@
 # golem-next release notes
 
+## 1.3.0 — 9 November 2026
+
+Use it with the Golem firmware golem-1.3.0 (https://github.com/malandante/mt32-pi/releases):
+`.gparam` and the `gp_*` library need it, and an older firmware answers
+"no answer" to them. Everything from 1.2.0 works as before with either
+firmware.
+
+### New
+
+- **Sound parameters from the Next** (`docs/sound-params.md`, in Spanish): one
+  protocol to read and change what the Golem plays, for games, editors and
+  music programs, with the same answers from the firmware and golemd.
+  - **OPL3:** each instrument of the working bank, byte by byte or whole
+    (heard at once), the bank's header and directory, and the whole bank
+    uploaded or downloaded as a WOPL file. An uploaded or edited bank lasts
+    until another bank is chosen, across songs.
+  - **MT-32:** its memory with Roland's addresses (patches, timbres, rhythm,
+    system), read and written; the ROM timbres, read-only; the whole memory
+    as a `.SYX` dump of DT1 messages (17841 bytes), downloaded or uploaded,
+    checked whole before any of it is applied.
+  - **FluidSynth:** reverb, chorus (with its type), polyphony and gain, and
+    the effects as a SoundFont profile (`.cfg`, the format of mt32-pi's
+    profiles), downloaded or uploaded.
+  - **Engine settings:** MT-32 gain, reverb gain, resampler quality, reversed
+    stereo and a forced reverb; OPL3 emulator, chips and gain.
+- **`.gparam`:** the protocol from the command line: `info`, `get`, `set`,
+  `put` and `save` (an OPL3 bank, `mt32` dump or `fx` profile) and `sbi`
+  (a Sound Blaster `.SBI` instrument into the OPL3 bank, as a program or a
+  drum). Numbers are hexadecimal. Examples in `docs/programming.md` (3.4).
+- **`gp_*` library for programs:** `lib/gparam.s` (assembler, with the
+  framing, checksums and waiting done once per frame) and, for ZX Basic,
+  loadable banks `GPAR4000.BIN` ... `GPARE000.BIN` with `lib/gparam.bas`.
+  With GSEQ playing, the library queues its messages in GSEQ
+  (`gs_send_long`), which sends each one whole between the music.
+  *[checked in the simulator; `.gparam`, built on it, on hardware]*
+- **`.golem play file.mid bank`:** a number after the file chooses the OPL3
+  bank first: `.opl3 play doom.mid 72`.
+- **`tools/golembank.py`:** OPL3 banks on the PC: a new WOPL bank, `.SBI`
+  instruments added to it as programs or drums, and its list.
+
+### Changed
+
+- With firmware golem-1.3.0, `.golem set fx on` no longer forces FluidSynth's
+  reverb and chorus on: they are as the SoundFont's profile (or what was
+  written with `.gparam`) says. `off` still silences both.
+
+### Known issues
+
+- A faint click can be heard when a game or `play` resets the MT-32 while the
+  reverb of the previous music is still sounding (from 1.2.0).
+- The firmware answers native MT-32 requests (RQ1, used by MT-32 editors) as
+  an MT-32 does, but no Next program sends them yet: checked in host tests
+  only.
+
+### Tested
+
+On hardware, 8 and 9 November 2026, by Javier: ZX Spectrum Next, Golem on a
+Raspberry Pi 4, firmware golem-1.3.0 (its last test build).
+
+- `.gparam info`, `get` and `set` on the settings and the OPL3 instruments
+  (heard at once), errors with their position, `sbi` as a program and as a
+  drum, `save` and `put` of the OPL3 bank (also across songs), `play` with
+  a bank.
+- MT-32: the memory read and written (a timbre name written by a song,
+  changed and restored), ROM timbres, `save mt32` and `put mt32`.
+- FluidSynth: reverb and chorus on and off, room size by ear, `save fx` and
+  `put fx`.
+- What 1.2.0 did, again: `play` on the three engines, `.golem status`, `set`,
+  `bank`.
+- Not checked on hardware: the `gp_*` library from a program of its own
+  (ZX Basic or assembler), GSEQ long messages, native RQ1, a Pi 3.
+
 ## 1.2.0 — 21 October 2026
 
 Use it with the Golem firmware golem-1.2.0 (https://github.com/malandante/mt32-pi/releases),
