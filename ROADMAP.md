@@ -20,30 +20,24 @@ capture or a measurement on real hardware. The evidence is in this repository.
 | 2026-10-08 | **Release 1.0.0:** reproducible SD package with SHA-256 sums; Golem firmware release with its source. | [`RELEASE_NOTES.md`](RELEASE_NOTES.md), `tools/release/build_release.py` |
 | 2026-10-13 | **MIDI out through a joystick port** (`.golem output`), driver ABI 0.3 with receive errors in `STATUS`. | Analyser captures on the Next ([`tests/hardware/results/2026-10-13-joystick-output/`](tests/hardware/results/2026-10-13-joystick-output/README.md)); driver checks in a Z80 simulator in CI |
 | 2026-10-13 | **Release 1.1.0.** | [`RELEASE_NOTES.md`](RELEASE_NOTES.md) |
+| 2026-10-21 | **Release 1.2.0: an OPL3 engine** (libADLMIDI, Nuked OPL3) next to MT-32 and General MIDI, with 79 banks and your own WOPL files; USB MIDI through the Golem, settings kept by the firmware, MIDI input for programs, a limiter for louder music. | [`RELEASE_NOTES.md`](RELEASE_NOTES.md); checked on a Next with a Raspberry Pi 4 |
+| 2026-11-09 | **Release 1.3.0: sound parameters.** One protocol to read and change what the Golem plays: OPL3 instruments and banks, the MT-32's memory and dumps, FluidSynth's effects, engine settings. `.gparam` and the `gp_*` library. | [`docs/sound-params.md`](docs/sound-params.md), host tests shared with the firmware; checked on a Next with a Raspberry Pi 4 |
 
-## Next: 1.2
+## Next
 
-- **A cable for the joystick MIDI output:** a diagram for the 3.3 V signal and
-  a test with a real synthesiser.
+- **The Golem link:** an adapter board in the place of the Next's Pi Zero and
+  one cable to the Pi, carrying the UART, the I²S audio and SPI.
+- **All the Next's sound through the Golem** for VGA users: the Next's mixer
+  sent to the Pi and out of its audio jack (experimental in 1.2.0).
+- **OPL3 registers from games:** a game writes the chip directly, as on a PC
+  with a Sound Blaster, through the sound-parameter protocol.
+- **MIDI out through a joystick port to a real synthesiser:** a diagram for
+  the 3.3 V signal and a test with a real MT-32.
 - **Official driver ID** from the NextZXOS maintainers, replacing the
   experimental `$2D`.
-- **Golem side on the analyser:** its UART replies and the I²S stream, and the
-  same tests on a Raspberry Pi 4.
-- **Pause in `.golem play`** (P), as in `.GSQ`: silence the synth, and on
-  resume restore each channel's volume and the notes that were sounding.
+- **Pause in `.golem play`** (P), as in `.GSQ`.
 - **Stress tests on hardware:** large SysEx dumps, dense tracks, slow SD cards,
   a Pi that is off or restarts, driver reinstalls.
-- **MIDI held while the Golem switches engine**, once games can ask for engine
-  changes through the GSEQ library.
-- **Firmware:** control buttons on configurable GPIO pins, and capability bits
-  in the Golem status for optional hardware.
-
-## Then: an OPL3 engine
-
-What the Golem plays: a third engine next to MT-32 and General MIDI, an
-emulated Yamaha OPL3 for the FM sound of AdLib and Sound Blaster music, on
-every supported Pi from the Pi 3 on. The first step is measuring the CPU cost
-of the candidate emulators on a Pi 3; the result decides which one ships.
 
 ## After that: interactive music for games
 

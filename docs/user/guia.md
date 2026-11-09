@@ -148,7 +148,7 @@ experimental `$2D`; el definitivo se pedirá a los responsables de NextZXOS.
 
 | Orden | Qué hace |
 | --- | --- |
-| `.golem play fichero.mid` | Reproduce un MIDI (SMF 0 o 1, hasta 24 pistas y 1 MB). SPACE lo cancela. |
+| `.golem play fichero.mid [banco]` | Reproduce un MIDI (SMF 0 o 1, hasta 24 pistas y 1 MB). SPACE lo cancela. Un número tras el fichero elige antes el banco OPL3, como `.golem bank`: `.opl3 play doom.mid 72`. |
 | `.golem note <nota> <vel> <seg> [canal]` | Toca una nota de prueba: nota 0–127, velocidad 1–127, 1–60 segundos, canal 1–16 (1 si no se indica). Con el motor MT-32 usa los canales 2–10: el 1 no suena. |
 | `.golem status` | Comprueba el driver y pregunta al Golem su motor, ROM y SoundFont, p. ej. «Golem: engine MT32; ROM new; SoundFont 0»; con el motor OPL3 también su banco («engine OPL3; bank 72; …»). Si no contesta en 0,2 s dice «no answer». «RX errors» indica que se han recibido bytes con error. |
 | `.golem engine mt32` / `fluidsynth` / `opl3` | Cambia el motor de la Pi: MT-32 (Munt), General MIDI (FluidSynth) o General MIDI con síntesis FM OPL3, el sonido de una Sound Blaster 16 (libADLMIDI; firmware golem-1.2.0). |

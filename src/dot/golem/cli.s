@@ -96,7 +96,16 @@ parse_command:
         xor a
         ld (de),a
         call at_command_end
+        jr c,.play_ok
+        call parse_u8           ; play FILE BANK: the OPL3 bank first
         jp nc,.bad
+        cp 128
+        jp nc,.bad
+        ld (play_bank),a
+        call skip_spaces
+        call at_command_end
+        jp nc,.bad
+.play_ok:
         ld a,CMD_PLAY
         ld (command_mode),a
 .good:

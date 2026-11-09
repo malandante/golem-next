@@ -6,7 +6,8 @@
    firmware's ACCEPTED and READY (mode, device count), returns success with
    golem_status = mode, count. A READY with another mode is ignored, except
    for a query (7F), which accepts any mode.
-3. `play` still stores the file name, now in the track_states area.
+3. `play` still stores the file name, in its own buffer (the track states
+   moved to the work bank).
 4. `reset` (any case) sets CMD_RESET and near misses are rejected; `rom new`
    still parses. reset_synth writes the MT-32 reset and GM System On.
 5. print_z expands the PFX byte into a new line and "Golem: ".
@@ -147,14 +148,15 @@ for value, mode, devices in ((2, 2, 1), (1, 1, 0), (0, 0, 2), (0x7F, 1, 1)):
 carry, _, _ = exchange(1, 2, 1)
 check(carry is None, "READY with a different mode is ignored")
 
-# 3. The file name shares memory with track_states
+# 3. The file name has its own buffer below $4000; the track states are in
+#    the work bank
 mem = fresh()
 text = b'play "my song.mid"\r'
 mem[CMDLINE:CMDLINE + len(text)] = list(text)
 carry, _ = call(sym["parse_command"], mem, {su.H: CMDLINE >> 8, su.L: CMDLINE & 255})
 name = bytes(mem[sym["filename"]:sym["filename"] + 12])
-check(carry == 1 and sym["filename"] == sym["track_states"] and name == b"my song.mid\0",
-      "play stores the file name at track_states")
+check(carry == 1 and sym["filename"] >= ORG and 0x6000 <= sym["track_states"] < 0x8000
+      and name == b"my song.mid\0", "play stores the file name in its buffer")
 
 # 4. .golem reset
 def parse(line):

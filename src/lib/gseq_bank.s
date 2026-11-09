@@ -25,12 +25,19 @@
 ;   7 send    HL = message (visible during the call), B = length (1-16)
 ;   8 query   A = state; HL = 10-byte information block inside this bank:
 ;             copy it before unmapping the bank. Z clear while busy.
+;  11 send_long  (minor 1) HL = message of any length, DE = its length (0
+;             only asks): gs_send_long. Carry while the previous one is still
+;             going. The message is read while it is sent: keep it unchanged,
+;             outside MMU0/1, this slot and the data window, until it has gone.
+;             Entries 9 and 10 do not exist: their addresses hold the
+;             signature, so entry 11 lands just after it, at slot + 33.
 ; Same rules as gseq.s: carry and A = GS_ERR_* on error, IX preserved, IY
 ; unused. Every entry maps the ROM in MMU0/1 for the call and then restores
 ; them, so the caller may run from slot 1 and the data window may be slot 0
 ; or 1. Neither the stack nor anything the call reads (the bank table, the
 ; message of send) may lie in MMU0/1, in this slot or in the data window.
-; At slot address + 27: "GSEQ", major 1, minor 0, so a loader can check it.
+; At slot address + 27: "GSEQ", major 1, minor 1, so a loader can check it
+; (minor 1: entry 11).
 
 GSB_MAX_BANKS   equ 224                 ; 8K banks of a 2 MB Next
 
@@ -45,7 +52,8 @@ gsb_table:
         jp gsb_e7
         jp gsb_e8
 gsb_signature:
-        db "GSEQ",1,0
+        db "GSEQ",1,1
+        jp gsb_e11              ; entry 11: slot + 33
 
 ; Each entry runs its routine with the ROM in MMU0/1, as GOLEM.DRV requires,
 ; and then puts back what the caller had there: the caller may run from a
@@ -85,6 +93,10 @@ gsb_e7:
 gsb_e8:
         ld (gsb_hl),hl
         ld hl,gs_query
+        jp gsb_rom
+gsb_e11:
+        ld (gsb_hl),hl
+        ld hl,gs_send_long
         jp gsb_rom
 
 ; HL = routine; A, B, DE and gsb_hl are its arguments. Returns its A, flags

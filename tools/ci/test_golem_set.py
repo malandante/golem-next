@@ -12,6 +12,9 @@
    which now share one ending, still set their command and mode, and
    `engine opl3` selects engine 2.
 6. `.golem status` names the OPL3 engine and, with it active, asks for the bank.
+7. `play FILE BANK` keeps the bank (0-127) for play and rejects near misses;
+   before playing, select_engine sends SET_PARAM 5 with it, and nothing
+   without one.
 
     python3 tools/ci/test_golem_set.py --sjasmplus /tmp/sjasmplus/sjasmplus --skoolkit /tmp/skoolkit
 """
@@ -273,4 +276,27 @@ check(text.startswith(b"\rGolem: engine OPL3; bank 72; no MT32 ROM"), f"status w
 got = status_text(0x7F, 0)
 check(got.startswith(b"\rGolem: engine none;"), f"status with no engine: {got!r}")
 
+# 7. play FILE BANK
+for line, name, bank in (("play song.mid", b"song.mid", 0xFF), ("play song.mid 58", b"song.mid", 58),
+                         ('play "my song.mid" 0', b"my song.mid", 0), ('PLAY "c:/m/x.mid"  127 ', b"c:/m/x.mid", 127),
+                         ("play song.mid 72:print", b"song.mid", 72)):
+    carry, mem = parse(line)
+    got = bytes(mem[sym["filename"]:sym["filename"] + len(name) + 1])
+    check(carry == 1 and mem[sym["command_mode"]] == 0 and got == name + b"\0" and mem[sym["play_bank"]] == bank,
+          f"'{line.strip()}' -> play {name.decode()} bank {bank:02X}")
+for line in ("play song.mid 128", "play song.mid x", "play song.mid 5 6", "play song.mid -1", "play song.mid 300"):
+    carry, _ = parse(line)
+    check(carry == 0, f"'{line}' rejected")
+
+for bank, want in ((58, True), (0xFF, False)):
+    mem = fresh()
+    mem[sym["driver_caps"]] = 0x02          # RX
+    mem[sym["driver_caps"] + 1] = 0         # output: the Golem
+    mem[sym["play_bank"]] = bank
+    carry, written = call(sym["select_engine"], mem)
+    if want:
+        check(written[:6] == HEADER and written[7:] == bytes([SET_PARAM, 5, 58, 0xF7]),
+              f"select_engine sends the bank first: {written.hex(' ').upper()}")
+    else:
+        check(carry == 0 and written == b"", "without a bank select_engine sends nothing (.golem)")
 sys.exit(1 if fails else 0)

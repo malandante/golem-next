@@ -272,6 +272,7 @@ it).
 | `gs_pause` / `gs_resume` | `DE` = now |
 | `gs_stop` | — |
 | `gs_send` | `HL` = message, `B` = length (1–16) |
+| `gs_send_long` | `HL` = message of any length, `DE` = length (0 only asks); carry while the previous one is still going |
 | `gs_query` | returns `A` = state, `HL` = 10-byte information block; Z clear while busy |
 
 ```asm
@@ -417,7 +418,59 @@ the replies with `READ`. A SoundFont change can take seconds, and the Pi does
 not listen to MIDI meanwhile: wait for `READY` before playing. The source of
 `.golem` (`src/dot/golem/golem_client.s`) is a complete client.
 
-### 3.4 Reading MIDI: a keyboard on the Next
+### 3.4 Sound parameters: instruments and banks
+
+From firmware golem-1.3.0 and golemd, the
+Golem's OPL3 instruments and banks can be read and changed from the Next while
+it plays: one instrument byte, a whole instrument (128 bytes), or the whole
+bank as a WOPL file. The protocol is in `docs/sound-params.md` (in Spanish).
+The client library `src/lib/gparam.s` (MIT, assembler) does the framing, the
+checksums, the 7-in-8 packing and the waiting: start an operation (`gp_info`,
+`gp_write`, `gp_read`, `gp_blob_put`, `gp_blob_get`), then call `gp_update`
+once per frame until it is done. With GSEQ playing, its pump has to be the
+only one sending: call `gp_set_sender` with `HL = gs_send_long` and the
+library queues its messages in GSEQ, which sends each one whole once the
+music due has gone.
+
+ZX Basic programs use the library as a loadable 8K bank (`GPAR4000.BIN` ...
+`GPARE000.BIN`, built by `tools/build-gparam-bank.ps1`) through
+`src/lib/gparam.bas`: `GpSetLibrary(bank, slot)`, `GpInit()`, then
+`GpRequest(...)` with `GpWrite()` or `GpRead()`, or `GpFileBlock(...)` with
+`GpBlobPut()` or `GpBlobGet()`, and `GpUpdate(4)` once per frame until it
+is not `GP_BUSY`; `GpResult()` gives `gpError`, `gpDetail` and `gpCount`.
+That version writes and reads by itself, so it is not for use while GSEQ
+plays.
+
+`.GPARAM` is a small tool built on it:
+
+```text
+.gparam info                      firmware version, name, OPL3 banks
+.gparam get 01 26 1               program 0, operator 1 total level
+.gparam set 01 26 3F              set it to 3F (63), its quietest
+.gparam put c:/opl3/mybank.wopl   upload a bank: the OPL3 engine plays it
+.gparam save c:/opl3/now.wopl     download what the OPL3 engine plays
+.gparam sbi c:/sbi/brass.sbi 3D   a .SBI instrument as program 61 (hex 3D)
+.gparam sbi c:/sbi/kick.sbi drum 24   ... or as drum note 36 (hex 24)
+.gparam get 00 40000 17           the MT-32's system area, 23 bytes
+.gparam get 04 0 A                the name of ROM timbre A1 (area 04)
+.gparam save mt32 c:/mt32/now.syx the MT-32's memory as DT1 messages
+.gparam put mt32 c:/mt32/now.syx  ... and back in, checked whole first
+.gparam get 10 8000 16            FluidSynth's effects (area 10, section 02)
+.gparam save fx c:/golem/now.cfg  the effects as a SoundFont profile
+.gparam put fx c:/golem/now.cfg   ... and back in: what FluidSynth plays
+```
+
+In area 00 the address is Roland's as one number: `a2 a1 a0` is
+a2 x 4000 + a1 x 80 + a0 in hexadecimal, so the system area (`10 00 00`) is
+40000, the patch memory (`05 00 00`) 14000 and memory timbre 1 (`08 00 00`)
+20000, timbre 2 20100. Area 04 has ROM timbre *n* (A1-B64, then the rhythm
+timbres) at *n* x 100.
+
+Numbers are hexadecimal. A bank uploaded with `put` (up to 512K) stays until
+another bank is chosen (`.golem bank`), also across songs. `save` makes room
+for 128K: DMXOPL3, the bank the Golem starts with, is 116K as a WOPL file.
+
+### 3.5 Reading MIDI: a keyboard on the Next
 
 Two ways for a keyboard's MIDI to reach the Next, both read with the driver's
 `READ`:
