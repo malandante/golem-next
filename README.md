@@ -1,98 +1,91 @@
 # golem-next
 
-MIDI driver, dot commands and a music library for the **ZX Spectrum Next**.
-The Next sends MIDI over its UART to a **Golem** (a Raspberry Pi running the
-Golem firmware, based on mt32-pi), which plays it with Munt (Roland MT-32 /
-CM-32L) or FluidSynth (General MIDI SoundFonts) and sends the audio back to the
-Next over I²S.
+MIDI driver, dot commands and music libraries for the **ZX Spectrum Next**.
 
-- **`GOLEM.DRV`**: NextZXOS driver that any program can call (`M_DRVAPI`).
-- **`.GOLEM`**: plays MIDI files and test notes and sets the Golem engine, ROM
-  set and SoundFont. **`.MT32`** and **`.GM`** do the same but first switch the
-  Golem to MT-32 or General MIDI.
+The Next sends MIDI over its UART to a **Golem**: a Raspberry Pi 3 or 4,
+outside the Next, running the Golem firmware (based on mt32-pi). The Golem
+plays it with one of three engines and sends the audio back to the Next over
+I²S, so it comes out of the Next's own outputs:
+
+- **MT-32 / CM-32L** (Munt), for the Roland soundtracks of the PC classics;
+- **General MIDI** (FluidSynth, with any SoundFont);
+- **OPL3** (libADLMIDI with Nuked OPL3), the AdLib / Sound Blaster FM sound,
+  with 79 banks and your own.
+
+## What is in it
+
+- **`GOLEM.DRV`**: a NextZXOS driver any program can call (`M_DRVAPI`): MIDI
+  out and in, and the Golem's replies.
+- **`.GOLEM`**: plays MIDI files and test notes, chooses the engine, ROM set,
+  SoundFont and OPL3 bank, and shows the Golem's status. **`.MT32`**, **`.GM`**
+  and **`.OPL3`** do the same, switching the Golem to that engine first.
 - **`.GSQ`** and the **GSEQ library**: precompiled music for games, with
-  loops, pause and sound effects, callable from assembler or ZX Basic.
+  loops, pause and sound effects, from assembler or ZX Basic.
+- **`.GPARAM`** and the **`gp_*` library**: read and change what the Golem
+  plays: OPL3 instruments and banks, the MT-32's memory, FluidSynth's effects,
+  engine settings.
+- **`.MIDIMON`** and the **MIDI input library**: a MIDI keyboard on the Next.
+- **PC tools** (Python 3): `gseq.py` (MIDI to GSEQ) and `golembank.py` (OPL3
+  banks and `.SBI` instruments).
+- **MIDI out through a joystick port**, to a real MT-32 or any MIDI synth,
+  without a Golem.
 
-**Download:** the SD package (`golem-next-<version>.zip`, with `SHA256SUMS`) is
-on the [releases page](https://github.com/malandante/golem-next/releases). The
-Golem firmware and its source are at
-[malandante/mt32-pi](https://github.com/malandante/mt32-pi/releases).
+## Get started
 
-**Quick start** (the cable, the cards, the first sound): [English](docs/user/quickstart.md) · [español](docs/user/inicio-rapido.md).
-**User guide:** [English](docs/user/guide.md) · [español](docs/user/guia.md).
-**Programmer's guide:** [music and MIDI in your own programs](docs/programming.md) (BASIC, ZX Basic, assembler).
-**Release notes:** [RELEASE_NOTES.md](RELEASE_NOTES.md) · **Roadmap:** [what has been done and what comes next](ROADMAP.md).
+- **Download:** the SD package (`golem-next-<version>.zip`, with
+  `SHA256SUMS`) is on the [releases page](https://github.com/malandante/golem-next/releases).
+  The Golem firmware and its source are at
+  [malandante/mt32-pi](https://github.com/malandante/mt32-pi/releases).
+- **Quick start** (the cable, the cards, the first sound):
+  [English](docs/user/quickstart.md) · [español](docs/user/inicio-rapido.md).
+- **User guide:** [English](docs/user/guide.md) · [español](docs/user/guia.md).
+- **Programmer's guide:** [music and MIDI in your own programs](docs/programming.md)
+  (BASIC, ZX Basic, assembler).
+- **Release notes:** [RELEASE_NOTES.md](RELEASE_NOTES.md) · **Roadmap:**
+  [what has been done and what comes next](ROADMAP.md).
 
-golem-next is MIT licensed ([LICENSE](LICENSE)). The Golem firmware is a
-separate program under GPL-3.0. No Roland ROMs or commercial music are included.
+## Hardware
 
----
+Today the Golem is connected with a 40-wire ribbon cable with four wires cut,
+as the quick start explains. **The Pi has its own power supply: never join the
+Next's and the Pi's 5 V or 3.3 V lines, only ground.**
 
-*Lo que sigue es la documentación de desarrollo, en español.*
+The **Golem Link** is on its way: a board the size of the Next's Pi Zero, with
+a mini HDMI connector in the same place, and a mini HDMI cable out to the Pi.
+The v0.1 prototypes are being tested. Its connector is **not HDMI**: never
+plug it into a TV or monitor.
 
-## Documentación
+## Developer documentation
 
-- [Arquitectura y análisis de NextZXOS](docs/architecture.md)
-- [Guía de programación (inglés)](docs/programming.md)
-- [ABI del driver](docs/driver-api.md)
-- [Formato GSEQ y biblioteca](docs/m6-gseq.md)
-- [Arquitectura mínima de Golem](docs/golem-architecture.md)
-- [Control bidireccional Golem para mt32-pi](docs/mt32-pi-control.md)
-- [Banco CSpect → Munt](tests/integration/cspect/README.md)
-- [Pruebas en hardware](tests/hardware/README.md)
-- [Demo grabable de Monkey Island](tests/demo/mi1/README.md)
+The specifications below are in Spanish for now; English versions are on the
+way.
 
-## Componentes
+- [Driver ABI](docs/driver-api.md) and its [changelog](ABI_CHANGELOG.md)
+- [Sound-parameter protocol](docs/sound-params.md) (`.GPARAM`, `gp_*`)
+- [GSEQ format and library](docs/m6-gseq.md)
+- [The Golem's control protocol](docs/mt32-pi-control.md) and
+  [its minimal architecture](docs/golem-architecture.md)
+- [Architecture and NextZXOS analysis](docs/architecture.md)
+- [MIDI through a joystick port](hardware/joystick-midi/README.md)
+- [Licensing and third-party code](docs/licensing.md)
+- [CSpect → Munt test bench](tests/integration/cspect/README.md) ·
+  [hardware tests](tests/hardware/README.md) ·
+  [recordable Monkey Island demo](tests/demo/mi1/README.md)
 
-| Componente | Responsabilidad |
-| --- | --- |
-| `GOLEM.DRV` | Transporte genérico instalable NextZXOS; configura UART y mueve MIDI en ambos sentidos mediante llamadas acotadas. Antes `MT32.DRV` (renombrado el 7 de octubre de 2026, #76); el ID y las constantes `MT32_*` del ABI no cambian. |
-| `.GOLEM` | Comando de primer plano: notas, reproducción y selección de motor/SoundFont/ROM. `.MT32` y `.GM` son el mismo comando, pero antes de `play` y `note` piden a un Golem el motor MT-32 o FluidSynth; sin respuesta en 200 ms tocan igualmente. |
-| Transporte UART | MIDI binario compatible con MT32-Pi; control de capacidad, errores y configuración del UART del Pi. |
-| Retorno I²S | Configuración del audio digital generado por la Pi y recibido/mezclado por el Next. |
-| Utilidades y fixtures | Generadores propios de MIDI sintético, inspección de eventos y capturas reproducibles. |
-| Documentación y tests | Contratos, pruebas de parser/ABI y procedimientos de validación física. |
+## Building
 
-```text
-GOLEM: archivo → parser SMF → secuenciador
-                              ↓ API NextZXOS
-                           GOLEM.DRV
-                              ↓ UART / MIDI
-                Golem Pi 4 / mt32-pi
-                    ├── Munt
-                    └── FluidSynth
-                              ↓ audio I²S
-                    FPGA y salida audio Next
-```
-
-## Cable externo
-
-**Alimentaciones independientes: aislar todas las líneas de 5V y 3V3 entre Next y Pi. Mantener masa común (GND).** UART e I²S utilizan funciones estándar de los GPIO de la Pi a nivel lógico de 3,3 V; aislar la alimentación 3V3 no significa eliminar esas señales. No conectar un cable completo de 40 vías sin comprobar orientación y aislamiento. El header Accelerator no es el conector J15.
-
-El mapa lógico, los pines del lado Pi y las verificaciones pendientes del lado Next están en [la arquitectura](docs/architecture.md). No se presenta todavía un cable validado para montaje.
-
-### Comprobaciones con mt32-pi
-
-- En `roms/` de la tarjeta de mt32-pi, solo ROMs completas (por ejemplo `mt32_ctrl_1_07.rom`, `mt32_pcm.rom`, `cm32l_ctrl_1_02.rom`, `cm32l_pcm.rom`). Las partidas (`_a`/`_b`, `_h`/`_l`) pueden dejar el emulador sin arrancar; mt32-pi pasa entonces a FluidSynth sin aviso visible si no hay pantalla. Síntomas: SysEx sin efecto, instrumentos equivocados, poco volumen. Una sola ROM de control por variante (old/new), porque se usa la primera que aparezca en el directorio.
-- Fuente de alimentación de la Pi suficiente: con una insuficiente no recibe MIDI.
-- Para oír la Pi por el Next: `output_device = i2s` en `mt32-pi.cfg`. Desde #6, `GOLEM.DRV` activa la recepción I²S (`$A2=$D2`) al adquirirse; con un driver anterior hace falta `REG 162,210`.
-- Prueba rápida de SysEx: un volumen general 0 (`F0 41 10 16 12 10 00 16 00 5A F7`) debe silenciar la nota siguiente.
-
-## Construcción de desarrollo
-
-Con NextBuild 10 instalado en su ruta predeterminada:
+With NextBuild 10 in its default location (Windows, PowerShell):
 
 ```powershell
 & .\tools\build-driver.ps1
 & .\tools\build-golem.ps1
-& .\tools\build-test-client.ps1
-& .\tools\build-cspect-bridge.ps1
-& .\tools\build-golem-control-image.ps1 -OutputImage C:\temp\golem-control.img
+& .\tools\build-gseq-bank.ps1
+& .\tools\build-gparam-bank.ps1
 & "$env:USERPROFILE\Documents\NextBuildv10\Python\python.exe" `
   -m unittest discover -s .\tests\host -v
 ```
 
-Paquete de la SD con hashes (el mismo que publica la CI al etiquetar `v*`):
+The SD package with its hashes (the same one CI publishes for each release):
 
 ```powershell
 & "$env:USERPROFILE\Documents\NextBuildv10\Python\python.exe" `
@@ -101,81 +94,20 @@ Paquete de la SD con hashes (el mismo que publica la CI al etiquetar `v*`):
   --out C:\temp\golem-dist
 ```
 
-Deja `C:\temp\golem-dist\golem-next-1.0.0\` y el `.zip`; su `SHA256SUMS` debe
-coincidir con el de la release (que se compila con sjasmplus).
+It leaves `C:\temp\golem-dist\golem-next-<version>\` and the `.zip`; its
+`SHA256SUMS` must match the release's (built with sjasmplus).
 
-La validación sobre Next y Golem físicos, incluido el cableado seguro, la
-captura UART/I²S y la comparación automática de CSV, se describe en
-[`tests/hardware/README.md`](tests/hardware/README.md).
+The driver is built as `build/GOLEM.DRV` and the commands as `build/GOLEM`,
+`build/MT32`, `build/GM` and `build/OPL3` (the same code; `CLI_ENGINE` in
+`src/dot/golem_cli.s`), with `build/MIDIMON` and `build/GPARAM`. The test clients (`MTTEST`, `MTSTRESS`, `MTAPIERR`,
+`MTNOID`, `MTCOLLIDE`, `MTSTATE`, `MTDURATION`) are experimental. The driver
+uses the experimental ID `$2D` until NextZXOS assigns one.
 
-El driver generado queda en `build/GOLEM.DRV`; el comando se genera como
-`build/GOLEM`, `build/MT32` y `build/GM` (mismo código; `CLI_ENGINE` en
-`src/dot/golem_cli.s`). Los
-clientes de conformidad quedan en `build/MTTEST`, `MTSTRESS`, `MTAPIERR`, `MTNOID`
-y `MTCOLLIDE`, además de `MTSTATE` y `MTDURATION`; son experimentales y usan
-temporalmente el ID `$2D`, todavía no asignado por NextZXOS.
+## License
 
-## Reproducción MIDI experimental
-
-```text
-.golem engine mt32
-.golem engine fluidsynth
-.golem soundfont 0
-.golem rom old|new|cm32l
-.golem status
-.golem note 60 100 2
-.golem note 60 100 2 10
-.golem play TEST0.MID
-.golem play TEST1.MID
-.golem play TESTSYX.MID
-.golem play TESTSAB.MID
-.golem play TESTCAN.MID
-.golem play TESTTIM.MID
-.mt32 play TEST1.MID     (pide antes el motor MT-32)
-.gm play TEST1.MID       (pide antes FluidSynth)
-```
-
-`engine`, `soundfont` y `rom` usan el protocolo Golem v1 del fork mt32-pi:
-`F0 7D 47 4C 4D 01 tt cc ... F7`. No son Program Change. Cada orden sólo se
-declara correcta tras recibir `ACCEPTED` y después `READY` con la misma
-transacción, comando y valor; `ERROR` y el timeout se propagan como fallo. El
-CLI limita aún SoundFont a `0..127`, aunque el formato reserva 14 bits.
-
-`note` recibe nota MIDI `0..127`, velocidad `1..127`, duración `1..60`
-segundos y un canal opcional `1..16` (por defecto, 1). Emite Note Off explícito
-y All Notes Off al terminar o al cancelar con SPACE. `status` informa del
-driver y, si el driver tiene RX y la sesión está libre, envía `GET_STATUS` y
-muestra el motor, la ROM y el SoundFont del Golem (#78); sin respuesta en
-200 ms lo dice y termina. Los mensajes de los comandos están en inglés.
-
-`play` admite SMF 0/1 con división PPQN, hasta 24 pistas y 1 MB menos un byte
-(1048575 bytes; antes de #14, 32767). Fusiona
-pistas por tiempo absoluto, conserva running status por pista, aplica cambios
-de tempo y envía eventos de canal y SysEx F0/F7. SPACE cancela la reproducción;
-la salida envía All Notes Off, vacía el driver con timeout, libera los
-bancos asignados y restaura los MMU. El scheduler de primer plano observa el
-contador raster de sólo lectura y reparte sus líneas en pasos exactos de 1 ms;
-la matriz `TESTTIM.MID` pasa a 3,5/7/14/28 MHz y 50/60 Hz. Desde #57, `play`
-sube la CPU a 28 MHz mientras carga y reproduce, y al salir (también con error o
-cancelación) restaura la velocidad del llamador. Todavía debe
-compararse con hardware y medirse su jitter físico para cerrar M4. SMF 2 y
-división SMPTE se rechazan.
-
-`.golem play` es deliberadamente una herramienta de validación en primer plano.
-Antes de congelar la API de M6 se añadirá un secuenciador cooperativo para
-juegos: cada llamada `pump/update` tendrá trabajo acotado, enviará sólo eventos
-vencidos y devolverá el control sin espera activa.
-
-No se copia código de otros proyectos. La Golem MIDI API es reutilizable por
-cualquier juego y mantendrá separado el
-transporte físico. No se incluyen ROMs de MT-32 ni contenido de Monkey Island.
-Tampoco se incluyen soundtracks ni extractos comerciales usados como evidencia
-local.
-
-## Licencia
-
-MIT (ver `LICENSE`), desde el 6 de octubre de 2026: cualquiera puede usar el
-driver, los comandos, la futura biblioteca M6 y las especificaciones, también
-en juegos cerrados o comerciales, conservando el aviso de autoría. El firmware
-de Golem (fork de mt32-pi) sigue siendo GPL-3.0 porque lo hereda. Detalles y
-reglas para código de terceros: `docs/licensing.md`.
+golem-next is MIT licensed ([LICENSE](LICENSE)): anyone may use the driver,
+the commands, the libraries and the specifications, also in closed or
+commercial games, keeping the copyright notice. The Golem firmware is a
+separate program under GPL-3.0, inherited from mt32-pi. No Roland ROMs,
+commercial music or other projects' code are included. Details:
+[docs/licensing.md](docs/licensing.md).
